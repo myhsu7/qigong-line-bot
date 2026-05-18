@@ -12,7 +12,7 @@ A LINE chatbot for tracking daily Qigong practice, maintaining streaks, and disp
 ## Prerequisites
 
 - Node.js (v18+)
-- PostgreSQL
+- Docker & Docker Compose (for the database)
 - Tailscale (for secure webhook routing to localhost)
 - LINE Developer Account (Messaging API Channel)
 
@@ -33,15 +33,13 @@ npm install
 
 ### 3. Database Setup
 
-Ensure PostgreSQL is installed and running on your server.
+We use Docker to manage the PostgreSQL database. Ensure you have Docker and Docker Compose installed.
 
 ```bash
-# Create the database
-createdb qigong_bot
-
-# Import the schema
-psql -d qigong_bot -f schema.sql
+# Start the PostgreSQL database in the background
+docker compose up -d db
 ```
+This will automatically create the `qigong_bot` database and run the `schema.sql` initialization script on the first startup.
 
 ### 4. Environment Configuration
 
@@ -57,9 +55,9 @@ Edit the `.env` file and fill in your details:
 PORT=3000
 LINE_CHANNEL_ACCESS_TOKEN=your_channel_access_token
 LINE_CHANNEL_SECRET=your_channel_secret
-DATABASE_URL=postgres://user:password@localhost:5432/qigong_bot
+DATABASE_URL=postgres://qigong_user:qigong_password@localhost:5432/qigong_bot
 ```
-*(Replace `user` and `password` with your actual PostgreSQL credentials).*
+*(If you are using the provided Docker setup, these default credentials will work immediately).*
 
 ### 5. Setup Tailscale Funnel (Webhook)
 
