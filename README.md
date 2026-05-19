@@ -92,7 +92,23 @@ npm start
 ## Post-Installation Setup
 
 1. **Invite to Group:** Invite the bot to your main Qigong LINE group. The bot will automatically capture the `group_id` when it joins and save it to the database so it knows where to send the 8:00 PM daily reminders.
-2. **Setup Rich Menu:** Use the LINE Official Account Manager web dashboard to create a Rich Menu with the buttons "✅ Check-In", "🏆 Leaderboard", and "📊 My Stats".
+2. **Setup Rich Menu:** Use the LINE Official Account Manager web dashboard to create your Rich Menu.
+    1. Go to the [LINE Official Account Manager](https://manager.line.biz/) and log in.
+    2. Select your Qigong bot's Official Account.
+    3. On the left sidebar under the **Home** tab, find **Chat screen** and click on **Rich menus**.
+    4. Click the **Create a rich menu** button.
+    5. **Display Settings:**
+       - **Title:** Enter a name (e.g., "Qigong Main Menu").
+       - **Active Period:** Set the start date to today and the end date far into the future (e.g., year 2030).
+       - **Menu bar text:** Enter "Menu" or "選單".
+       - **Default behavior:** Select "Display".
+    6. **Content & Action Settings:**
+       - **Select a template:** Choose a template with 3 distinct buttons/areas.
+       - **Upload Background Image:** Upload a matching background image (check LINE's dimension requirements).
+       - **Action A (Check-In):** Set Action type to **Text** and enter exactly `✅ Check-In`.
+       - **Action B (Leaderboard):** Set Action type to **Text** and enter exactly `🏆 Leaderboard`.
+       - **Action C (My Stats):** Set Action type to **Text** and enter exactly `📊 My Stats`.
+    7. Click **Save**. The menu will now appear for anyone who adds your bot.
 
 ## Tech Stack
 - TypeScript / Node.js
