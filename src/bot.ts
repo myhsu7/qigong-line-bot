@@ -1,6 +1,7 @@
 import { messagingApi, webhook } from '@line/bot-sdk';
 import { db } from './db';
 import moment from 'moment-timezone';
+import { evaluateBadges } from './badges';
 
 const TIMEZONE = 'Asia/Taipei';
 
@@ -19,10 +20,29 @@ export const handleEvent = async (event: webhook.Event): Promise<any> => {
     if (event.type === 'join' && event.source && event.source.type === 'group') {
         const groupId = (event.source as any).groupId;
         if (event.replyToken) {
-            await db.query("INSERT INTO config (key, value) VALUES ('group_id', $1) ON CONFLICT (key) DO UPDATE SET value = $1", [groupId]);
+            await db.query("INSERT INTO active_groups (group_id) VALUES ($1) ON CONFLICT DO NOTHING", [groupId]);
             return client.replyMessage({
                 replyToken: event.replyToken,
                 messages: [{ type: 'text', text: '大家好！我已經準備好為大家記錄每天的氣功練習了。請記得加我為好友，在私訊中進行每日打卡喔！' }]
+            });
+        }
+    }
+
+    // Handle bot being removed from a group
+    if (event.type === 'leave' && event.source && event.source.type === 'group') {
+        const groupId = (event.source as any).groupId;
+        await db.query("DELETE FROM active_groups WHERE group_id = $1", [groupId]);
+        return null;
+    }
+
+    // Admin commands (Hidden)
+    if (event.type === 'message' && event.message.type === 'text' && event.message.text.trim() === '!admin register_group' && event.source && event.source.type === 'group') {
+        const groupId = (event.source as any).groupId;
+        if (event.replyToken) {
+            await db.query("INSERT INTO active_groups (group_id) VALUES ($1) ON CONFLICT DO NOTHING", [groupId]);
+            return client.replyMessage({
+                replyToken: event.replyToken,
+                messages: [{ type: 'text', text: '系統訊息：此群組已成功註冊至廣播名單。' }]
             });
         }
     }
@@ -77,9 +97,52 @@ export const handleEvent = async (event: webhook.Event): Promise<any> => {
         const userStats = await db.query('SELECT current_streak, longest_streak, total_checkins FROM users WHERE line_user_id = $1', [userId]);
         if (userStats.rows.length > 0) {
             const row = userStats.rows[0];
+            
+            // Determine level (Title)
+            let levelTitle = '練氣 (Level 1)';
+            if (row.total_checkins >= 200) levelTitle = '化境 (Level 4)';
+            else if (row.total_checkins >= 90) levelTitle = '結丹 (Level 3)';
+            else if (row.total_checkins >= 30) levelTitle = '築基 (Level 2)';
+
+            // Fetch Badges
+            const badgesRes = await db.query(`
+                SELECT b.emoji, b.name, u.earned_year 
+                FROM user_badges u 
+                JOIN badges b ON u.badge_id = b.id 
+                WHERE u.line_user_id = $1 
+                ORDER BY u.unlocked_at ASC
+            `, [userId]);
+            
+            let trophyCase = '🏆 你的榮譽勳章：\n';
+            if (badgesRes.rows.length === 0) {
+                trophyCase += '目前還沒有勳章，快去打卡解鎖吧！';
+            } else {
+                // Group duplicates by name
+                const badgeCounts: Record<string, { emoji: string, count: number, years: string[] }> = {};
+                badgesRes.rows.forEach(b => {
+                    if (!badgeCounts[b.name]) {
+                        badgeCounts[b.name] = { emoji: b.emoji, count: 0, years: [] };
+                    }
+                    badgeCounts[b.name].count += 1;
+                    if (b.earned_year) badgeCounts[b.name].years.push(b.earned_year.toString());
+                });
+
+                const badgeStrings = Object.keys(badgeCounts).map(name => {
+                    const b = badgeCounts[name];
+                    let text = `${b.emoji} ${name}`;
+                    if (b.count > 1) text += ` (x${b.count})`;
+                    if (b.years.length > 0) text += ` [${b.years.join(', ')}]`;
+                    return text;
+                });
+                
+                trophyCase += badgeStrings.join(' | ');
+            }
+
+            const msgText = `📊 你的修練數據：\n\n【當前境界】${levelTitle}\n🔥 連續打卡：${row.current_streak} 天\n📈 最高連打：${row.longest_streak} 天\n⭐ 總計打卡：${row.total_checkins} 天\n\n${trophyCase}\n\n繼續保持！💪`;
+
             return client.replyMessage({
                 replyToken,
-                messages: [{ type: 'text', text: `📊 你的練習數據：\n\n連續打卡：${row.current_streak} 天\n最高連打：${row.longest_streak} 天\n總計打卡：${row.total_checkins} 天\n\n繼續保持！💪` }]
+                messages: [{ type: 'text', text: msgText }]
             });
         }
         return null;
@@ -122,6 +185,9 @@ export const handleEvent = async (event: webhook.Event): Promise<any> => {
             'INSERT INTO checkin_logs (line_user_id, note) VALUES ($1, $2)',
             [userId, text]
         );
+
+        // Background evaluation of badges (don't await so it doesn't block reply)
+        evaluateBadges(userId, text).catch(e => console.error("Badge evaluation error:", e));
 
         return client.replyMessage({
             replyToken,

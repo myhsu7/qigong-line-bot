@@ -14,11 +14,11 @@ const client = new messagingApi.MessagingApiClient(lineConfig);
 
 export const sendDailyReminder = async () => {
     try {
-        const { rows } = await db.query("SELECT value FROM config WHERE key = 'group_id'");
-        const groupId = rows[0]?.value;
+        const { rows: groups } = await db.query("SELECT group_id FROM active_groups");
+        const groupIds = groups.map(r => r.group_id);
 
-        if (!groupId) {
-            console.log('No group_id found in config. Cannot send reminder.');
+        if (groupIds.length === 0) {
+            console.log('No active groups found. Cannot send reminder.');
             return;
         }
 
@@ -51,12 +51,18 @@ export const sendDailyReminder = async () => {
 
         const messageText = `🌙 晚安！氣功時間到了！\n\n${solarTermMsg}\n\n「練功如春起之苗，不見其增，日有所長。」\n大家今天練習了嗎？記得去 1對1 聊天室打卡喔！\n\n${leaderMsg}`;
 
-        await client.pushMessage({
-            to: groupId,
-            messages: [{ type: 'text', text: messageText }]
-        });
+        // Send via Multicast to save quota
+        // LINE allows max 500 recipients per multicast request
+        const batchSize = 500;
+        for (let i = 0; i < groupIds.length; i += batchSize) {
+            const batch = groupIds.slice(i, i + batchSize);
+            await client.multicast({
+                to: batch,
+                messages: [{ type: 'text', text: messageText }]
+            });
+        }
 
-        console.log(`Daily reminder sent successfully to ${groupId}`);
+        console.log(`Daily reminder sent successfully to ${groupIds.length} groups`);
     } catch (error) {
         console.error('Error sending daily reminder:', error);
     }

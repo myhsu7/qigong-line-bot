@@ -1,30 +1,6 @@
--- Database Schema for Qigong LINE Bot
+-- Migration script from v1 to v2
 
-CREATE TABLE IF NOT EXISTS users (
-    line_user_id VARCHAR(255) PRIMARY KEY,
-    display_name VARCHAR(255),
-    total_checkins INTEGER DEFAULT 0,
-    current_streak INTEGER DEFAULT 0,
-    longest_streak INTEGER DEFAULT 0,
-    last_checkin_date DATE
-);
-
-CREATE TABLE IF NOT EXISTS checkin_logs (
-    id SERIAL PRIMARY KEY,
-    line_user_id VARCHAR(255) REFERENCES users(line_user_id),
-    note TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS config (
-    key VARCHAR(50) PRIMARY KEY,
-    value TEXT
-);
-
--- Insert a placeholder for group_id so we can update it later
-INSERT INTO config (key, value) VALUES ('group_id', NULL) ON CONFLICT (key) DO NOTHING;
-
--- V2 Tables
+-- 1. Create new tables
 CREATE TABLE IF NOT EXISTS active_groups (
     group_id VARCHAR(255) PRIMARY KEY,
     joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -46,7 +22,12 @@ CREATE TABLE IF NOT EXISTS user_badges (
     PRIMARY KEY (line_user_id, badge_id, earned_year)
 );
 
--- Populate initial badge catalog
+-- 2. Migrate existing group from config table to active_groups
+INSERT INTO active_groups (group_id)
+SELECT value FROM config WHERE key = 'group_id' AND value IS NOT NULL
+ON CONFLICT (group_id) DO NOTHING;
+
+-- 3. Populate initial badge catalog into the badges table
 INSERT INTO badges (id, name, emoji, description, category) VALUES
     ('streak_3', '入門', '🥉', '連續打卡 3 天', 'STREAK'),
     ('streak_7', '小成', '🥈', '連續打卡 7 天', 'STREAK'),
@@ -63,4 +44,3 @@ ON CONFLICT (id) DO UPDATE SET
     emoji = EXCLUDED.emoji,
     description = EXCLUDED.description,
     category = EXCLUDED.category;
-
