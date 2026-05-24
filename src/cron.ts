@@ -70,3 +70,34 @@ export const sendDailyReminder = async () => {
         console.error('Error sending daily reminder:', error);
     }
 };
+
+export const sendAdHocBroadcast = async (messageText: string): Promise<number> => {
+    try {
+        const { rows: groups } = await db.query("SELECT group_id FROM active_groups");
+        const groupIds = groups.map(r => r.group_id);
+
+        if (groupIds.length === 0) {
+            console.log('No active groups found. Cannot send broadcast.');
+            return 0;
+        }
+
+        let successCount = 0;
+        for (const groupId of groupIds) {
+            try {
+                await client.pushMessage({
+                    to: groupId,
+                    messages: [{ type: 'text', text: messageText }]
+                });
+                successCount++;
+            } catch (e) {
+                console.error(`Failed to send broadcast to group ${groupId}:`, e);
+            }
+        }
+
+        console.log(`Ad-hoc broadcast sent successfully to ${successCount}/${groupIds.length} groups`);
+        return successCount;
+    } catch (error) {
+        console.error('Error sending ad-hoc broadcast:', error);
+        return 0;
+    }
+};

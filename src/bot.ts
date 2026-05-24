@@ -2,6 +2,7 @@ import { messagingApi, webhook } from '@line/bot-sdk';
 import { db } from './db';
 import moment from 'moment-timezone';
 import { evaluateBadges } from './badges';
+import { sendDailyReminder, sendAdHocBroadcast } from './cron';
 
 const TIMEZONE = 'Asia/Taipei';
 
@@ -36,15 +37,45 @@ export const handleEvent = async (event: webhook.Event): Promise<any> => {
     }
 
     // Admin commands (Hidden)
-    if (event.type === 'message' && event.message.type === 'text' && event.message.text.trim() === '!admin register_group' && event.source && event.source.type === 'group') {
-        const groupId = (event.source as any).groupId;
-        if (event.replyToken) {
-            await db.query("INSERT INTO active_groups (group_id) VALUES ($1) ON CONFLICT DO NOTHING", [groupId]);
+    if (event.type === 'message' && event.message.type === 'text' && event.message.text.trim().startsWith('!admin ')) {
+        const adminUserId = process.env.ADMIN_USER_ID;
+        const userId = event.source?.userId;
+        const text = event.message.text.trim();
+        const replyToken = event.replyToken;
+        
+        if (userId !== adminUserId) {
+            return null; // Silently ignore if not admin
+        }
+
+        if (text === '!admin register_group' && event.source && event.source.type === 'group') {
+            const groupId = (event.source as any).groupId;
+            if (replyToken) {
+                await db.query("INSERT INTO active_groups (group_id) VALUES ($1) ON CONFLICT DO NOTHING", [groupId]);
+                return client.replyMessage({
+                    replyToken,
+                    messages: [{ type: 'text', text: '系統訊息：此群組已成功註冊至廣播名單。' }]
+                });
+            }
+        }
+
+        if (text === '!admin resend-reminder' && replyToken) {
+            await sendDailyReminder();
             return client.replyMessage({
-                replyToken: event.replyToken,
-                messages: [{ type: 'text', text: '系統訊息：此群組已成功註冊至廣播名單。' }]
+                replyToken,
+                messages: [{ type: 'text', text: '系統訊息：已成功手動觸發每日提醒廣播！' }]
             });
         }
+
+        if (text.startsWith('!admin broadcast ') && replyToken) {
+            const broadcastMsg = text.replace('!admin broadcast ', '').trim();
+            const successCount = await sendAdHocBroadcast(broadcastMsg);
+            return client.replyMessage({
+                replyToken,
+                messages: [{ type: 'text', text: `系統訊息：自訂廣播已成功發送至 ${successCount} 個群組！` }]
+            });
+        }
+        
+        return null;
     }
 
     // 2. We only care about text messages from users

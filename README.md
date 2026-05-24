@@ -56,8 +56,10 @@ PORT=3000
 LINE_CHANNEL_ACCESS_TOKEN=your_channel_access_token
 LINE_CHANNEL_SECRET=your_channel_secret
 DATABASE_URL=postgres://qigong_user:qigong_password@localhost:5432/qigong_bot
+ADMIN_USER_ID=your_line_user_id
 ```
-*(If you are using the provided Docker setup, these default credentials will work immediately).*
+*(If you are using the provided Docker setup, the default DB credentials will work immediately).*
+*(For `ADMIN_USER_ID`, this is your personal LINE user ID, needed to execute `!admin` commands).*
 
 ### 5. Setup Tailscale Funnel (Webhook)
 
@@ -91,7 +93,8 @@ npm start
 
 ## Post-Installation Setup
 
-1. **Invite to Group:** Invite the bot to your main Qigong LINE group. The bot will automatically capture the `group_id` when it joins and save it to the database so it knows where to send the 8:00 PM daily reminders.
+1. **Invite to Group:** Invite the bot to your Qigong LINE groups. The bot will automatically capture the `group_id` when it joins and save it to the database so it knows where to send the 8:00 PM daily reminders.
+    - If you miss the join event, you can type `!admin register_group` in the group to manually register it.
 2. **Setup Rich Menu:** Use the LINE Official Account Manager web dashboard to create your Rich Menu.
     1. Go to the [LINE Official Account Manager](https://manager.line.biz/) and log in.
     2. Select your Qigong bot's Official Account.
@@ -109,6 +112,13 @@ npm start
        - **Action B (Leaderboard):** Set Action type to **Text** and enter exactly `🏆 Leaderboard`.
        - **Action C (My Stats):** Set Action type to **Text** and enter exactly `📊 My Stats`.
     7. Click **Save**. The menu will now appear for anyone who adds your bot.
+
+## Admin Commands
+
+If you have configured `ADMIN_USER_ID` in your `.env` file, you can type these commands in any chat (1-on-1 or group) with the bot:
+- `!admin register_group`: Register the current group for daily broadcasts.
+- `!admin resend-reminder`: Manually trigger the 8:00 PM daily reminder broadcast.
+- `!admin broadcast [message]`: Send an ad-hoc custom message to all registered active groups.
 
 ## Tech Stack
 - TypeScript / Node.js
