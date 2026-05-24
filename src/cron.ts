@@ -51,18 +51,21 @@ export const sendDailyReminder = async () => {
 
         const messageText = `🌙 晚安！氣功時間到了！\n\n${solarTermMsg}\n\n「練功如春起之苗，不見其增，日有所長。」\n大家今天練習了嗎？記得去 1對1 聊天室打卡喔！\n\n${leaderMsg}`;
 
-        // Send via Multicast to save quota
-        // LINE allows max 500 recipients per multicast request
-        const batchSize = 500;
-        for (let i = 0; i < groupIds.length; i += batchSize) {
-            const batch = groupIds.slice(i, i + batchSize);
-            await client.multicast({
-                to: batch,
-                messages: [{ type: 'text', text: messageText }]
-            });
+        // Send via pushMessage to each group individually (multicast does not support group IDs)
+        let successCount = 0;
+        for (const groupId of groupIds) {
+            try {
+                await client.pushMessage({
+                    to: groupId,
+                    messages: [{ type: 'text', text: messageText }]
+                });
+                successCount++;
+            } catch (e) {
+                console.error(`Failed to send reminder to group ${groupId}:`, e);
+            }
         }
 
-        console.log(`Daily reminder sent successfully to ${groupIds.length} groups`);
+        console.log(`Daily reminder sent successfully to ${successCount}/${groupIds.length} groups`);
     } catch (error) {
         console.error('Error sending daily reminder:', error);
     }
