@@ -155,7 +155,7 @@ export const handleEvent = async (event: webhook.Event): Promise<any> => {
                         badgeCounts[b.name] = { emoji: b.emoji, count: 0, years: [] };
                     }
                     badgeCounts[b.name].count += 1;
-                    if (b.earned_year) badgeCounts[b.name].years.push(b.earned_year.toString());
+                    if (b.earned_year && b.earned_year !== 0) badgeCounts[b.name].years.push(b.earned_year.toString());
                 });
 
                 const badgeStrings = Object.keys(badgeCounts).map(name => {

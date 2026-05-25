@@ -13,23 +13,14 @@ const lineConfig = {
 const client = new messagingApi.MessagingApiClient(lineConfig);
 
 // Helper to check if a user already earned a specific badge this year
-const hasEarnedBadge = async (userId: string, badgeId: string, year: number | null): Promise<boolean> => {
-    let query = 'SELECT 1 FROM user_badges WHERE line_user_id = $1 AND badge_id = $2';
-    let params: any[] = [userId, badgeId];
-    
-    if (year !== null) {
-        query += ' AND earned_year = $3';
-        params.push(year);
-    } else {
-        query += ' AND earned_year IS NULL';
-    }
-
-    const { rows } = await db.query(query, params);
+const hasEarnedBadge = async (userId: string, badgeId: string, year: number): Promise<boolean> => {
+    const query = 'SELECT 1 FROM user_badges WHERE line_user_id = $1 AND badge_id = $2 AND earned_year = $3';
+    const { rows } = await db.query(query, [userId, badgeId, year]);
     return rows.length > 0;
 };
 
 // Helper to award a badge
-const awardBadge = async (userId: string, badgeId: string, year: number | null) => {
+const awardBadge = async (userId: string, badgeId: string, year: number) => {
     // Double check to prevent race conditions
     if (await hasEarnedBadge(userId, badgeId, year)) return;
 
@@ -41,7 +32,7 @@ const awardBadge = async (userId: string, badgeId: string, year: number | null) 
     const { rows } = await db.query('SELECT name, emoji, description FROM badges WHERE id = $1', [badgeId]);
     if (rows.length > 0) {
         const badge = rows[0];
-        const yearText = year ? ` (${year}年)` : '';
+        const yearText = year !== 0 ? ` (${year}年)` : '';
         const msg = `🎉 恭喜！你解鎖了【${badge.emoji} ${badge.name}】成就${yearText}！\n\n條件：${badge.description}\n繼續保持這份毅力！💪`;
         
         try {
@@ -66,14 +57,14 @@ export const evaluateBadges = async (userId: string, text: string) => {
     const { current_streak, total_checkins } = userRows[0];
 
     // --- STREAK BADGES ---
-    if (current_streak >= 3 && !(await hasEarnedBadge(userId, 'streak_3', null))) await awardBadge(userId, 'streak_3', null);
-    if (current_streak >= 7 && !(await hasEarnedBadge(userId, 'streak_7', null))) await awardBadge(userId, 'streak_7', null);
-    if (current_streak >= 21 && !(await hasEarnedBadge(userId, 'streak_21', null))) await awardBadge(userId, 'streak_21', null);
-    if (current_streak >= 100 && !(await hasEarnedBadge(userId, 'streak_100', null))) await awardBadge(userId, 'streak_100', null);
+    if (current_streak >= 3 && !(await hasEarnedBadge(userId, 'streak_3', 0))) await awardBadge(userId, 'streak_3', 0);
+    if (current_streak >= 7 && !(await hasEarnedBadge(userId, 'streak_7', 0))) await awardBadge(userId, 'streak_7', 0);
+    if (current_streak >= 21 && !(await hasEarnedBadge(userId, 'streak_21', 0))) await awardBadge(userId, 'streak_21', 0);
+    if (current_streak >= 100 && !(await hasEarnedBadge(userId, 'streak_100', 0))) await awardBadge(userId, 'streak_100', 0);
 
     // --- TOTAL BADGES ---
-    if (total_checkins >= 10 && !(await hasEarnedBadge(userId, 'total_10', null))) await awardBadge(userId, 'total_10', null);
-    if (total_checkins >= 100 && !(await hasEarnedBadge(userId, 'total_100', null))) await awardBadge(userId, 'total_100', null);
+    if (total_checkins >= 10 && !(await hasEarnedBadge(userId, 'total_10', 0))) await awardBadge(userId, 'total_10', 0);
+    if (total_checkins >= 100 && !(await hasEarnedBadge(userId, 'total_100', 0))) await awardBadge(userId, 'total_100', 0);
 
     // --- TIME-BASED BADGES ---
     // Fetch last 5 check-ins to check the time window
@@ -95,12 +86,12 @@ export const evaluateBadges = async (userId: string, text: string) => {
             if (hour < 21 || hour >= 23) allNight = false;
         }
 
-        if (allMorning && current_streak >= 5 && !(await hasEarnedBadge(userId, 'time_morning', null))) {
-            await awardBadge(userId, 'time_morning', null);
+        if (allMorning && current_streak >= 5 && !(await hasEarnedBadge(userId, 'time_morning', 0))) {
+            await awardBadge(userId, 'time_morning', 0);
         }
         
-        if (allNight && current_streak >= 5 && !(await hasEarnedBadge(userId, 'time_night', null))) {
-            await awardBadge(userId, 'time_night', null);
+        if (allNight && current_streak >= 5 && !(await hasEarnedBadge(userId, 'time_night', 0))) {
+            await awardBadge(userId, 'time_night', 0);
         }
     }
 
