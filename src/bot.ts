@@ -42,15 +42,26 @@ export const handleEvent = async (event: webhook.Event): Promise<any> => {
         const userId = event.source?.userId;
         const text = event.message.text.trim();
         const replyToken = event.replyToken;
+        const now = moment().tz(TIMEZONE).format();
         
+        console.log(`[Admin Command] Received at ${now}`);
+        console.log(`[Admin Command] Command: "${text}"`);
+        console.log(`[Admin Command] Sender User ID: ${userId}`);
+        console.log(`[Admin Command] Configured Admin ID: ${adminUserId}`);
+        console.log(`[Admin Command] Match: ${userId === adminUserId}`);
+
         if (userId !== adminUserId) {
+            console.log(`[Admin Command] Ignored: Unauthorized user.`);
             return null; // Silently ignore if not admin
         }
+
+        console.log(`[Admin Command] Accepted. Executing...`);
 
         if (text === '!admin register_group' && event.source && event.source.type === 'group') {
             const groupId = (event.source as any).groupId;
             if (replyToken) {
                 await db.query("INSERT INTO active_groups (group_id) VALUES ($1) ON CONFLICT DO NOTHING", [groupId]);
+                console.log(`[Admin Command] Group registered: ${groupId}`);
                 return client.replyMessage({
                     replyToken,
                     messages: [{ type: 'text', text: '系統訊息：此群組已成功註冊至廣播名單。' }]
@@ -59,6 +70,7 @@ export const handleEvent = async (event: webhook.Event): Promise<any> => {
         }
 
         if (text === '!admin resend-reminder' && replyToken) {
+            console.log(`[Admin Command] Resending daily reminder by requested user: ${userId}`);
             await sendDailyReminder();
             return client.replyMessage({
                 replyToken,
@@ -68,13 +80,15 @@ export const handleEvent = async (event: webhook.Event): Promise<any> => {
 
         if (text.startsWith('!admin broadcast ') && replyToken) {
             const broadcastMsg = text.replace('!admin broadcast ', '').trim();
-            const successCount = await sendAdHocBroadcast(broadcastMsg);
+            console.log(`[Admin Command] Sending ad-hoc broadcast length: ${broadcastMsg.length}`);
+            const successCount = await sendAdHocBroadcast(broadcastMsg, userId);
             return client.replyMessage({
                 replyToken,
                 messages: [{ type: 'text', text: `系統訊息：自訂廣播已成功發送至 ${successCount} 個群組！` }]
             });
         }
         
+        console.log(`[Admin Command] Unknown command or incorrect context.`);
         return null;
     }
 

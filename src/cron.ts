@@ -71,13 +71,16 @@ export const sendDailyReminder = async () => {
     }
 };
 
-export const sendAdHocBroadcast = async (messageText: string): Promise<number> => {
+export const sendAdHocBroadcast = async (messageText: string, requestedByUserId?: string): Promise<number> => {
     try {
+        console.log(`[AdHoc Broadcast] Started. Requested by: ${requestedByUserId || 'Unknown'}, Time: ${moment().tz(TIMEZONE).format()}`);
         const { rows: groups } = await db.query("SELECT group_id FROM active_groups");
         const groupIds = groups.map(r => r.group_id);
 
+        console.log(`[AdHoc Broadcast] Found ${groupIds.length} active groups.`);
+
         if (groupIds.length === 0) {
-            console.log('No active groups found. Cannot send broadcast.');
+            console.log('[AdHoc Broadcast] No active groups found. Cannot send broadcast.');
             return 0;
         }
 
@@ -90,14 +93,14 @@ export const sendAdHocBroadcast = async (messageText: string): Promise<number> =
                 });
                 successCount++;
             } catch (e) {
-                console.error(`Failed to send broadcast to group ${groupId}:`, e);
+                console.error(`[AdHoc Broadcast] Failed to send to group ${groupId}:`, e);
             }
         }
 
-        console.log(`Ad-hoc broadcast sent successfully to ${successCount}/${groupIds.length} groups`);
+        console.log(`[AdHoc Broadcast] Finished successfully to ${successCount}/${groupIds.length} groups`);
         return successCount;
     } catch (error) {
-        console.error('Error sending ad-hoc broadcast:', error);
+        console.error('[AdHoc Broadcast] Error sending ad-hoc broadcast:', error);
         return 0;
     }
 };
