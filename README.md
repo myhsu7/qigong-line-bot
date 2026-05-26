@@ -61,6 +61,8 @@ ADMIN_USER_ID=your_line_user_id
 *(If you are using the provided Docker setup, the default DB credentials will work immediately).*
 *(For `ADMIN_USER_ID`, this is your personal LINE user ID, needed to execute `!admin` commands).*
 
+⚠️ **Important:** `ADMIN_USER_ID` is **NOT** your regular LINE ID (the one you give friends to add you). It is your Developer User ID, which always starts with the letter `U` (e.g., `U1234567890abcdef...`). You can find this ID in the [LINE Developer Console](https://developers.line.biz/console/) by navigating to your Provider -> your Messaging API Channel -> clicking the **Basic settings** tab and scrolling all the way to the bottom to "**Your user ID**".
+
 ### 5. Setup Tailscale Funnel (Webhook)
 
 To allow LINE to communicate with your local server, expose port 3000 using Tailscale Funnel:
@@ -112,6 +114,38 @@ npm start
        - **Action B (Leaderboard):** Set Action type to **Text** and enter exactly `🏆 Leaderboard`.
        - **Action C (My Stats):** Set Action type to **Text** and enter exactly `📊 My Stats`.
     7. Click **Save**. The menu will now appear for anyone who adds your bot.
+
+## 🎮 Cultivation Levels & Badges (Gamification)
+
+To encourage daily Qigong practice, the bot features a built-in level and badge system.
+
+### Cultivation Levels (境界)
+Your level increases based on your **total** check-in days:
+- **練氣 (Level 1):** 0 - 29 days
+- **築基 (Level 2):** 30 - 89 days
+- **結丹 (Level 3):** 90 - 199 days
+- **化境 (Level 4):** 200+ days
+
+### Badges (榮譽勳章)
+Badges are displayed in your "Trophy Case" when you check your stats. Some badges can be earned multiple times (e.g., once per year).
+
+#### Streak Badges (連續打卡)
+- 🥉 **入門:** 3 consecutive days
+- 🥈 **小成:** 7 consecutive days
+- 🥇 **結丹:** 21 consecutive days
+- 💎 **百日築基:** 100 consecutive days
+
+#### Total Days Badges (總計打卡)
+- 🌱 **初芽:** 10 total days
+- 🌳 **大樹:** 100 total days
+
+#### Time-Based Badges (特殊時辰)
+- 🌅 **晨露:** 5 consecutive days checking in between 05:00 - 07:00
+- 🦉 **夜靜:** 5 consecutive days checking in between 21:00 - 23:00
+
+#### Seasonal Challenges (歲時節氣)
+- ☀️ **夏練三伏:** Earned by checking in for 27 consecutive days exactly after the Summer Solstice (夏至).
+- ❄️ **冬練三九:** Earned by checking in for 27 consecutive days exactly after the Winter Solstice (冬至) **and** including the keyword "龜壽功" in your practice note.
 
 ## Admin Commands
 
