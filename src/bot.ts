@@ -2,7 +2,8 @@ import { messagingApi, webhook } from '@line/bot-sdk';
 import { db } from './db';
 import moment from 'moment-timezone';
 import { evaluateBadges } from './badges';
-import { sendDailyReminder, sendAdHocBroadcast } from './cron';
+import { sendDailyReminder, sendAdHocBroadcast, sendManualResendReminder } from './cron';
+import { buildPeriodLeaderboardText } from './leaderboard';
 
 const TIMEZONE = 'Asia/Taipei';
 
@@ -71,10 +72,10 @@ export const handleEvent = async (event: webhook.Event): Promise<any> => {
 
         if (text === '!admin resend-reminder' && replyToken) {
             console.log(`[Admin Command] Resending daily reminder by requested user: ${userId}`);
-            await sendDailyReminder();
+            await sendManualResendReminder();
             return client.replyMessage({
                 replyToken,
-                messages: [{ type: 'text', text: '系統訊息：已成功手動觸發每日提醒廣播！' }]
+                messages: [{ type: 'text', text: '系統訊息：已成功手動觸發補發提醒廣播！' }]
             });
         }
 
@@ -117,6 +118,21 @@ export const handleEvent = async (event: webhook.Event): Promise<any> => {
             replyToken,
             messages: [{ type: 'text', text: '太棒了！你今天練習了什麼氣功呢？' }]
         });
+    }
+
+    if (text === '🏆 Weekly Leaderboard') {
+        const msg = await buildPeriodLeaderboardText('week');
+        return client.replyMessage({ replyToken, messages: [{ type: 'text', text: msg }] });
+    }
+
+    if (text === '🏆 Monthly Leaderboard') {
+        const msg = await buildPeriodLeaderboardText('month');
+        return client.replyMessage({ replyToken, messages: [{ type: 'text', text: msg }] });
+    }
+
+    if (text === '🏆 Quarterly Leaderboard') {
+        const msg = await buildPeriodLeaderboardText('quarter');
+        return client.replyMessage({ replyToken, messages: [{ type: 'text', text: msg }] });
     }
 
     if (text === '🏆 Leaderboard') {

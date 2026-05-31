@@ -57,9 +57,11 @@ LINE_CHANNEL_ACCESS_TOKEN=your_channel_access_token
 LINE_CHANNEL_SECRET=your_channel_secret
 DATABASE_URL=postgres://qigong_user:qigong_password@localhost:5432/qigong_bot
 ADMIN_USER_ID=your_line_user_id
+LINE_BOT_SHORTCUT_URL=https://line.me/R/oaMessage/%40your_oa_id/?%E2%9C%85%20Check-In
 ```
 *(If you are using the provided Docker setup, the default DB credentials will work immediately).*
 *(For `ADMIN_USER_ID`, this is your personal LINE user ID, needed to execute `!admin` commands).*
+*(For `LINE_BOT_SHORTCUT_URL`, this is the deep link added to daily reminders allowing users to quickly open the 1-on-1 chat with a prefilled check-in message).*
 
 ⚠️ **Important:** `ADMIN_USER_ID` is **NOT** your regular LINE ID (the one you give friends to add you). It is your Developer User ID, which always starts with the letter `U` (e.g., `U1234567890abcdef...`). You can find this ID in the [LINE Developer Console](https://developers.line.biz/console/) by navigating to your Provider -> your Messaging API Channel -> clicking the **Basic settings** tab and scrolling all the way to the bottom to "**Your user ID**".
 
@@ -114,6 +116,17 @@ npm start
        - **Action B (Leaderboard):** Set Action type to **Text** and enter exactly `🏆 Leaderboard`.
        - **Action C (My Stats):** Set Action type to **Text** and enter exactly `📊 My Stats`.
     7. Click **Save**. The menu will now appear for anyone who adds your bot.
+
+## 🏆 Leaderboards
+
+The bot tracks performance across different time windows to keep the community engaged. You can view these leaderboards by typing the following commands (or adding them to your Rich Menu):
+
+- `🏆 Leaderboard`: The **All-Time** leaderboard (shows lifetime top streaks and total days).
+- `🏆 Weekly Leaderboard`: The **Weekly** leaderboard (resets every Monday at 00:00 Asia/Taipei).
+- `🏆 Monthly Leaderboard`: The **Monthly** leaderboard (resets on the 1st of every month).
+- `🏆 Quarterly Leaderboard`: The **Quarterly** leaderboard (resets at the start of Q1, Q2, Q3, Q4).
+
+*Note: Each period leaderboard displays both the top 10 "Total check-in days" and the top 10 "Longest streak" achieved strictly within that time window.*
 
 ## 🎮 Cultivation Levels & Badges (Gamification)
 

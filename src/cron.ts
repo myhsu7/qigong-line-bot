@@ -4,6 +4,7 @@ import { messagingApi } from '@line/bot-sdk';
 import moment from 'moment-timezone';
 
 const TIMEZONE = 'Asia/Taipei';
+const CHECKIN_SHORTCUT_URL = process.env.LINE_BOT_SHORTCUT_URL || '';
 
 const lineConfig = {
     channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN || '',
@@ -12,7 +13,54 @@ const lineConfig = {
 
 const client = new messagingApi.MessagingApiClient(lineConfig);
 
-export const sendDailyReminder = async () => {
+// Helper to get Solar Term exact date using Lunar.fromDate mapping
+const getJieQiDateStr = (year: number, jieQiName: string): string | null => {
+    const lunar = Lunar.fromDate(new Date(year, 6, 1));
+    const jieQi = lunar.getJieQiTable()[jieQiName];
+    return jieQi ? jieQi.toYmd() : null;
+};
+
+const isSummerChallengePeriod = (now: moment.Moment): boolean => {
+    const summerSolsticeStr = getJieQiDateStr(now.year(), '夏至');
+    if (!summerSolsticeStr) return false;
+    const summerSolstice = moment.tz(summerSolsticeStr, TIMEZONE);
+    const daysSince = now.diff(summerSolstice, 'days');
+    return daysSince >= 0 && daysSince <= 27;
+};
+
+const isWinterChallengePeriod = (now: moment.Moment): boolean => {
+    const winterSolsticeStr = getJieQiDateStr(now.year(), 'DONG_ZHI');
+    if (!winterSolsticeStr) return false;
+    const winterSolstice = moment.tz(winterSolsticeStr, TIMEZONE);
+    const daysSince = now.diff(winterSolstice, 'days');
+    return daysSince >= 0 && daysSince <= 27;
+};
+
+const buildReminderMessage = (
+    mode: 'normal' | 'summer' | 'winter' | 'resend', 
+    solarTermMsg: string, 
+    leaderMsg: string
+): string => {
+    let msg = '';
+    
+    if (mode === 'summer') {
+        msg = `☀️ 夏練三伏進行中！\n\n連續 27 天，養陽固本；不求暴增，只求日進。\n今晚別忘了完成打卡，穩穩累積你的功力！\n\n${leaderMsg}`;
+    } else if (mode === 'winter') {
+        msg = `❄️ 冬練三九進行中！\n\n冬藏養精，重在恆心。今晚一起穩定練習，\n記得在打卡備註寫上「龜壽功」參與挑戰。\n\n${leaderMsg}`;
+    } else if (mode === 'resend') {
+        msg = `📣 補發提醒：還沒打卡的同學，現在就來完成！\n\n每天一點點，身心更穩定。\n今天完成，就能守住你的習慣與連勝。`;
+    } else {
+        msg = `🌙 晚安！氣功時間到了！\n\n${solarTermMsg}\n\n「練功如春起之苗，不見其增，日有所長。」\n今天練習了嗎？記得完成打卡，守住你的節奏！\n\n${leaderMsg}`;
+    }
+
+    if (CHECKIN_SHORTCUT_URL) {
+        msg += `\n\n👉 一鍵前往打卡：\n${CHECKIN_SHORTCUT_URL}`;
+    }
+
+    return msg;
+};
+
+export const sendDailyReminder = async (modeOverride?: 'resend') => {
     try {
         const { rows: groups } = await db.query("SELECT group_id FROM active_groups");
         const groupIds = groups.map(r => r.group_id);
@@ -49,7 +97,15 @@ export const sendDailyReminder = async () => {
             leaderMsg = '大家快來打卡，開啟你的練功連勝紀錄吧！';
         }
 
-        const messageText = `🌙 晚安！氣功時間到了！\n\n${solarTermMsg}\n\n「練功如春起之苗，不見其增，日有所長。」\n大家今天練習了嗎？記得去 1對1 聊天室打卡喔！\n\n${leaderMsg}`;
+        const messageText = buildReminderMessage(
+            modeOverride || (isSummerChallengePeriod(moment().tz(TIMEZONE)) ? 'summer' : isWinterChallengePeriod(moment().tz(TIMEZONE)) ? 'winter' : 'normal'),
+            solarTermMsg,
+            leaderMsg
+        );
+
+        if (!CHECKIN_SHORTCUT_URL) {
+            console.warn('[Warning] LINE_BOT_SHORTCUT_URL is not set. Deep link will not be appended to reminders.');
+        }
 
         // Send via pushMessage to each group individually (multicast does not support group IDs)
         let successCount = 0;
@@ -69,6 +125,10 @@ export const sendDailyReminder = async () => {
     } catch (error) {
         console.error('Error sending daily reminder:', error);
     }
+};
+
+export const sendManualResendReminder = async () => {
+    return sendDailyReminder('resend');
 };
 
 export const sendAdHocBroadcast = async (messageText: string, requestedByUserId?: string): Promise<number> => {
