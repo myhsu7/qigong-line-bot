@@ -2,13 +2,23 @@ import express from 'express';
 import { middleware } from '@line/bot-sdk';
 import * as dotenv from 'dotenv';
 import cron from 'node-cron';
+import path from 'path';
 import { handleEvent } from './bot';
 import { sendDailyReminder } from './cron';
+
+import { requireTailscaleInternal, requireAdminBasicAuth } from './middleware/adminSecurity';
+import { resolveLanguage } from './middleware/i18n';
+import adminApiRoutes from './routes/adminApi';
+import adminPagesRoutes from './routes/adminPages';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Setup EJS for Admin Dashboard
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
 
 const config = {
     channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN || '',
@@ -24,6 +34,11 @@ app.post('/webhook', middleware(config), (req, res) => {
             res.status(500).end();
         });
 });
+
+// Admin Dashboard Routes
+const adminMiddleware = [requireTailscaleInternal, requireAdminBasicAuth, resolveLanguage];
+app.use('/admin-dashboard', adminMiddleware, adminPagesRoutes);
+app.use('/api/admin', adminMiddleware, adminApiRoutes);
 
 app.get('/', (req, res) => {
     res.send('Qigong LINE Bot is running.');

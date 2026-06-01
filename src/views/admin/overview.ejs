@@ -1,0 +1,69 @@
+<%- include('partials/header') %>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="kpi-card">
+            <p><%= i18n.total_checkins %></p>
+            <h3><%= data.kpis.totalCheckins %></h3>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="kpi-card">
+            <p><%= i18n.active_users %></p>
+            <h3><%= data.kpis.activeUsers %></h3>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="kpi-card">
+            <p><%= i18n.avg_daily_checkins %></p>
+            <h3><%= data.kpis.avgDailyCheckins %></h3>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="chart-container">
+            <h5 class="mb-3"><%= i18n.daily_trend %></h5>
+            <% if (data.trend.length === 0) { %>
+                <p class="text-center text-muted my-5"><%= i18n.no_data %></p>
+            <% } else { %>
+                <canvas id="trendChart" height="80"></canvas>
+            <% } %>
+        </div>
+    </div>
+</div>
+
+<% if (data.trend.length > 0) { %>
+<script>
+    const ctx = document.getElementById('trendChart').getContext('2d');
+    const trendData = <%- JSON.stringify(data.trend) %>;
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: trendData.map(d => d.date),
+            datasets: [{
+                label: '<%= i18n.total_checkins %>',
+                data: trendData.map(d => d.count),
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { precision: 0 }
+                }
+            }
+        }
+    });
+</script>
+<% } %>
+
+<%- include('partials/footer') %>

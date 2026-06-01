@@ -58,6 +58,9 @@ LINE_CHANNEL_SECRET=your_channel_secret
 DATABASE_URL=postgres://qigong_user:qigong_password@localhost:5432/qigong_bot
 ADMIN_USER_ID=your_line_user_id
 LINE_BOT_SHORTCUT_URL=https://line.me/R/oaMessage/%40your_oa_id/?%E2%9C%85%20Check-In
+ADMIN_DASH_USER=admin
+ADMIN_DASH_PASS=your_strong_password
+ADMIN_ALLOWED_IP_PREFIX=100.
 ```
 *(If you are using the provided Docker setup, the default DB credentials will work immediately).*
 *(For `ADMIN_USER_ID`, this is your personal LINE user ID, needed to execute `!admin` commands).*
@@ -166,6 +169,20 @@ If you have configured `ADMIN_USER_ID` in your `.env` file, you can type these c
 - `!admin register_group`: Register the current group for daily broadcasts.
 - `!admin resend-reminder`: Manually trigger the 8:00 PM daily reminder broadcast.
 - `!admin broadcast [message]`: Send an ad-hoc custom message to all registered active groups.
+
+## 📈 Admin Dashboard (Web)
+
+A secure, read-only web dashboard is available to view check-in trends and community leaderboards without sending messages to the LINE group.
+
+1. **Access**: Navigate to `http://<your-server-ip>:3000/admin-dashboard`.
+2. **Security**: 
+   - By default, the dashboard **blocks all public traffic** and only allows connections from Tailscale IPs (`100.*`). You can configure this via the `ADMIN_ALLOWED_IP_PREFIX` environment variable.
+   - It requires Basic Auth credentials configured in `.env` (`ADMIN_DASH_USER` and `ADMIN_DASH_PASS`).
+3. **Features**:
+   - Filter by Week, Month, Quarter, and Year.
+   - View Daily Check-in Trends (Chart.js).
+   - View Top 10 Total Check-ins and Top 10 Longest Streaks.
+   - Multilingual support (zh-TW and English, determined by browser language or `?lang=` query param).
 
 ## Tech Stack
 - TypeScript / Node.js

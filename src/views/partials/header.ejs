@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="<%= lang %>">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= i18n.title %></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background-color: #f8f9fa; }
+        .sidebar { background-color: #343a40; min-height: 100vh; padding-top: 20px; }
+        .sidebar a { color: #fff; text-decoration: none; padding: 10px 20px; display: block; }
+        .sidebar a:hover, .sidebar a.active { background-color: #495057; }
+        .content-area { padding: 30px; }
+        .kpi-card { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; text-align: center; }
+        .kpi-card h3 { font-size: 2rem; margin: 10px 0 0; color: #0d6efd; }
+        .kpi-card p { color: #6c757d; margin: 0; text-transform: uppercase; font-size: 0.9rem; font-weight: bold; }
+        .chart-container { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 30px; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-2 sidebar">
+                <h5 class="text-white px-3 mb-4"><%= i18n.title %></h5>
+                <a href="/admin-dashboard?period=<%= currentPeriod %>&lang=<%= lang %>" class="<%= path === '/admin-dashboard' ? 'active' : '' %>"><%= i18n.overview %></a>
+                <a href="/admin-dashboard/leaderboard?period=<%= currentPeriod %>&lang=<%= lang %>" class="<%= path === '/admin-dashboard/leaderboard' ? 'active' : '' %>"><%= i18n.leaderboard %></a>
+                
+                <hr class="border-secondary mx-3">
+                <div class="px-3">
+                    <small class="text-secondary d-block mb-2">Language / 語言</small>
+                    <a href="?period=<%= currentPeriod %>&lang=zh-TW" class="p-0 text-decoration-underline mb-1 d-inline me-2" style="font-size: 0.9rem;">繁中</a>
+                    <a href="?period=<%= currentPeriod %>&lang=en" class="p-0 text-decoration-underline d-inline" style="font-size: 0.9rem;">EN</a>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-10 content-area">
+                <!-- Period Selector -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2><%= path === '/admin-dashboard' ? i18n.overview : i18n.leaderboard %> <small class="text-muted fs-5">(<%= dateRange %>)</small></h2>
+                    <div class="btn-group" role="group">
+                        <a href="?period=week&lang=<%= lang %>" class="btn btn-outline-primary <%= currentPeriod === 'week' ? 'active' : '' %>"><%= i18n.period_week %></a>
+                        <a href="?period=month&lang=<%= lang %>" class="btn btn-outline-primary <%= currentPeriod === 'month' ? 'active' : '' %>"><%= i18n.period_month %></a>
+                        <a href="?period=quarter&lang=<%= lang %>" class="btn btn-outline-primary <%= currentPeriod === 'quarter' ? 'active' : '' %>"><%= i18n.period_quarter %></a>
+                        <a href="?period=year&lang=<%= lang %>" class="btn btn-outline-primary <%= currentPeriod === 'year' ? 'active' : '' %>"><%= i18n.period_year %></a>
+                    </div>
+                </div>
