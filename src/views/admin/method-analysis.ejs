@@ -19,7 +19,9 @@
             <% if (data.methodDistribution.length === 0) { %>
                 <p class="text-center text-muted my-5"><%= i18n.no_data %></p>
             <% } else { %>
-                <canvas id="communityPieChart" height="250"></canvas>
+                <div style="position: relative; height: 350px; width: 100%;">
+                    <canvas id="communityPieChart"></canvas>
+                </div>
             <% } %>
         </div>
     </div>
