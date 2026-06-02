@@ -30,6 +30,7 @@
 
 ## 4) 每晚提醒
 群組晚間會收到提醒訊息，內含「一鍵前往打卡」連結，點一下就能快速打卡。
+
 <img width="391" height="844" alt="IMG_7198" src="https://github.com/user-attachments/assets/409f8c2c-e725-4d53-b50b-a0254f88fe9e" />
 
 **一起穩定練功、互相鼓勵、持續進步！💪**
