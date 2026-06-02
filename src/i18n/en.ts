@@ -15,5 +15,17 @@ export const en = {
     no_data: 'No data available for this period',
     name: 'Name',
     days: 'Days',
-    streak: 'Streak'
+    streak: 'Streak',
+    method_analysis: 'Method Analysis',
+    community_method_summary: 'Community Methods',
+    user_method_analysis: 'User Method Analysis',
+    search_user: 'Search User...',
+    top_methods: 'Top Methods',
+    composition_ratio: 'Composition',
+    attendance_ratio: 'Attendance',
+    recent_30_days: 'Last 30 Days',
+    recent_90_days: 'Last 90 Days',
+    review: 'Review',
+    method_name: 'Method',
+    matched_days: 'Matched Days'
 };

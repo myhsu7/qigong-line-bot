@@ -1,0 +1,191 @@
+<%- include('../partials/header') %>
+
+<div class="row">
+    <!-- Community Summary -->
+    <div class="col-md-5">
+        <div class="chart-container">
+            <h5 class="mb-4"><%= i18n.community_method_summary %></h5>
+            <div class="d-flex justify-content-between mb-3">
+                <div>
+                    <small class="text-muted text-uppercase fw-bold"><%= i18n.total_checkins %></small>
+                    <div class="fs-4 fw-bold text-primary"><%= data.totalCheckinDays %> <%= i18n.days %></div>
+                </div>
+                <div>
+                    <small class="text-muted text-uppercase fw-bold"><%= i18n.matched_days %></small>
+                    <div class="fs-4 fw-bold text-success"><%= data.totalMatchedMethodDays %> <%= i18n.days %></div>
+                </div>
+            </div>
+            
+            <% if (data.methodDistribution.length === 0) { %>
+                <p class="text-center text-muted my-5"><%= i18n.no_data %></p>
+            <% } else { %>
+                <canvas id="communityPieChart" height="250"></canvas>
+            <% } %>
+        </div>
+    </div>
+    
+    <!-- User Search & Analysis -->
+    <div class="col-md-7">
+        <div class="chart-container">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="mb-0"><%= i18n.user_method_analysis %></h5>
+                <div class="input-group" style="width: 250px;">
+                    <input type="text" id="userSearchInput" class="form-control" placeholder="<%= i18n.search_user %>">
+                    <button class="btn btn-outline-secondary" type="button" id="userSearchBtn">🔍</button>
+                </div>
+            </div>
+            
+            <div id="userSearchResults" class="list-group mb-3 d-none" style="max-height: 200px; overflow-y: auto;"></div>
+
+            <div id="userAnalysisContent" class="d-none">
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <h4 id="selectedUserName" class="text-primary"></h4>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-3 border-primary">
+                            <div class="card-header bg-primary text-white"><%= i18n.recent_30_days %></div>
+                            <div class="card-body p-2" id="stats30d">
+                                <!-- JS injected content -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card mb-3 border-info">
+                            <div class="card-header bg-info text-white"><%= i18n.recent_90_days %></div>
+                            <div class="card-body p-2" id="stats90d">
+                                <!-- JS injected content -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card bg-light mt-3">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted"><%= i18n.review %></h6>
+                        <p class="card-text fw-bold" id="reviewText"></p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="userAnalysisEmpty" class="text-center text-muted my-5">
+                <p>請先從上方搜尋並選擇學員</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<% if (data.methodDistribution.length > 0) { %>
+<script>
+    const ctx = document.getElementById('communityPieChart').getContext('2d');
+    const distData = <%- JSON.stringify(data.methodDistribution) %>;
+    
+    // Generate distinct colors
+    const colors = [
+        '#0d6efd', '#198754', '#ffc107', '#fd7e14', '#dc3545', '#6f42c1', '#20c997'
+    ];
+
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: distData.map(d => d.methodName),
+            datasets: [{
+                data: distData.map(d => d.matchedDays),
+                backgroundColor: colors.slice(0, distData.length)
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'right' }
+            }
+        }
+    });
+</script>
+<% } %>
+
+<script>
+    // Search User Logic
+    const searchInput = document.getElementById('userSearchInput');
+    const searchBtn = document.getElementById('userSearchBtn');
+    const resultsContainer = document.getElementById('userSearchResults');
+    
+    const analysisContent = document.getElementById('userAnalysisContent');
+    const analysisEmpty = document.getElementById('userAnalysisEmpty');
+
+    const renderMethodTable = (dataObj) => {
+        if (dataObj.methods.length === 0) return '<p class="text-muted small p-2 m-0"><%= i18n.no_data %></p>';
+        
+        let html = '<table class="table table-sm table-borderless m-0" style="font-size:0.85rem;">';
+        html += '<thead><tr><th><%= i18n.method_name %></th><th class="text-end"><%= i18n.days %></th><th class="text-end">Ratio</th></tr></thead><tbody>';
+        
+        dataObj.methods.slice(0, 5).forEach(m => {
+            const compRatio = (m.compositionRatio * 100).toFixed(1) + '%';
+            html += `<tr><td>${m.methodName}</td><td class="text-end text-primary">${m.matchedDays}</td><td class="text-end text-muted">${compRatio}</td></tr>`;
+        });
+        html += '</tbody></table>';
+        return html;
+    };
+
+    const fetchUserAnalysis = async (userId, displayName) => {
+        resultsContainer.classList.add('d-none');
+        analysisEmpty.classList.add('d-none');
+        analysisContent.classList.remove('d-none');
+        
+        document.getElementById('selectedUserName').innerText = displayName;
+        
+        try {
+            const res = await fetch(`/api/admin/method-analysis/user?userId=${userId}`);
+            const data = await res.json();
+            
+            document.getElementById('stats30d').innerHTML = renderMethodTable(data['30d']);
+            document.getElementById('stats90d').innerHTML = renderMethodTable(data['90d']);
+            document.getElementById('reviewText').innerText = data.reviewText;
+            
+        } catch (e) {
+            console.error(e);
+            document.getElementById('reviewText').innerText = '載入失敗';
+        }
+    };
+
+    const doSearch = async () => {
+        const q = searchInput.value.trim();
+        if (q.length < 1) {
+            resultsContainer.classList.add('d-none');
+            return;
+        }
+        
+        try {
+            const res = await fetch(`/api/admin/method-analysis/search-users?q=${encodeURIComponent(q)}`);
+            const users = await res.json();
+            
+            resultsContainer.innerHTML = '';
+            if (users.length === 0) {
+                resultsContainer.innerHTML = '<div class="list-group-item text-muted">無結果</div>';
+            } else {
+                users.forEach(u => {
+                    const a = document.createElement('a');
+                    a.className = 'list-group-item list-group-item-action cursor-pointer';
+                    a.style.cursor = 'pointer';
+                    a.innerText = u.display_name;
+                    a.onclick = () => fetchUserAnalysis(u.line_user_id, u.display_name);
+                    resultsContainer.appendChild(a);
+                });
+            }
+            resultsContainer.classList.remove('d-none');
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    searchBtn.addEventListener('click', doSearch);
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') doSearch();
+    });
+</script>
+
+<%- include('../partials/footer') %>

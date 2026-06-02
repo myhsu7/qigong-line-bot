@@ -15,5 +15,17 @@ export const zhTW = {
     no_data: '目前此期間尚無資料',
     name: '姓名',
     days: '天',
-    streak: '連續天數'
+    streak: '連續天數',
+    method_analysis: '功法分析',
+    community_method_summary: '全體功法分布',
+    user_method_analysis: '個人功法分析',
+    search_user: '搜尋學員...',
+    top_methods: '最常練功法',
+    composition_ratio: '功法配比',
+    attendance_ratio: '出席率',
+    recent_30_days: '近 30 天',
+    recent_90_days: '近 90 天',
+    review: '練功點評',
+    method_name: '功法',
+    matched_days: '命中天數'
 };

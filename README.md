@@ -182,6 +182,7 @@ A secure, read-only web dashboard is available to view check-in trends and commu
    - Filter by Week, Month, Quarter, and Year.
    - View Daily Check-in Trends (Chart.js).
    - View Top 10 Total Check-ins and Top 10 Longest Streaks.
+   - **Method Analysis:** View community-wide method distributions (Pie chart) and search individual users to see their personal method composition ratios over the last 30 and 90 days.
    - Multilingual support (zh-TW and English, determined by browser language or `?lang=` query param).
 
 ## Tech Stack

@@ -10,6 +10,8 @@ import { requireTailscaleInternal, requireAdminBasicAuth } from './middleware/ad
 import { resolveLanguage } from './middleware/i18n';
 import adminApiRoutes from './routes/adminApi';
 import adminPagesRoutes from './routes/adminPages';
+import adminMethodAnalysisApiRoutes from './routes/adminMethodAnalysisApi';
+import adminMethodAnalysisPagesRoutes from './routes/adminMethodAnalysisPages';
 
 dotenv.config();
 
@@ -37,7 +39,9 @@ app.post('/webhook', middleware(config), (req, res) => {
 
 // Admin Dashboard Routes
 const adminMiddleware = [requireTailscaleInternal, requireAdminBasicAuth, resolveLanguage];
+app.use('/admin-dashboard/method-analysis', adminMiddleware, adminMethodAnalysisPagesRoutes);
 app.use('/admin-dashboard', adminMiddleware, adminPagesRoutes);
+app.use('/api/admin/method-analysis', adminMiddleware, adminMethodAnalysisApiRoutes);
 app.use('/api/admin', adminMiddleware, adminApiRoutes);
 
 app.get('/', (req, res) => {
