@@ -5,7 +5,7 @@
 ## 1) 先加機器人好友
 - LINE 搜尋：`@909ctrbr`
 - 或點連結：`https://line.me/R/oaMessage/%40909ctrbr/`
-- <img width="391" height="844" alt="IMG_7190" src="https://github.com/user-attachments/assets/a01e69f5-4c44-4d89-92b0-fd7376cc0725" />
+  <img width="391" height="844" alt="IMG_7190" src="https://github.com/user-attachments/assets/a01e69f5-4c44-4d89-92b0-fd7376cc0725" />
 
 
 ## 2) 每日打卡方式
@@ -13,13 +13,15 @@
 2. 點選 `✅ Check-In`
 3. 輸入今天練習內容（例：大雁功、回春功、龜壽功）
 4. 完成打卡，系統會回覆你的連續天數
-5. <img width="391" height="844" alt="IMG_7194" src="https://github.com/user-attachments/assets/421015a7-46c6-468e-8538-0b4ff6bb2953" />
+   <img width="391" height="844" alt="IMG_7194" src="https://github.com/user-attachments/assets/421015a7-46c6-468e-8538-0b4ff6bb2953" />
 
 
 ## 3) 查詢功能
-- `📊 My Stats`：看個人連續天數、總天數、勳章 <img width="391" height="844" alt="IMG_7195" src="https://github.com/user-attachments/assets/bf762db8-c744-441b-87c2-d0389ab5fa64" />
+- `📊 My Stats`：看個人連續天數、總天數、勳章
+  <img width="391" height="844" alt="IMG_7195" src="https://github.com/user-attachments/assets/bf762db8-c744-441b-87c2-d0389ab5fa64" />
 
-- `🏆 Leaderboard`：看歷史總榜 <img width="391" height="844" alt="IMG_7196" src="https://github.com/user-attachments/assets/fdd1513b-29b0-46c9-9637-49f360794036" />
+- `🏆 Leaderboard`：看歷史總榜
+  <img width="391" height="844" alt="IMG_7196" src="https://github.com/user-attachments/assets/fdd1513b-29b0-46c9-9637-49f360794036" />
 
 - `🏆 Weekly Leaderboard`：週榜（週一重置）
 - `🏆 Monthly Leaderboard`：月榜（每月重置）
