@@ -3,6 +3,9 @@ import { Lunar } from 'lunar-javascript';
 import { messagingApi } from '@line/bot-sdk';
 import moment from 'moment-timezone';
 
+import { getDailyWisdom } from './content/wisdom';
+import { getSolarTermGuide } from './content/solarTerms';
+
 const TIMEZONE = 'Asia/Taipei';
 const CHECKIN_SHORTCUT_URL = process.env.LINE_BOT_SHORTCUT_URL || '';
 
@@ -38,8 +41,9 @@ const isWinterChallengePeriod = (now: moment.Moment): boolean => {
 
 const buildReminderMessage = (
     mode: 'normal' | 'summer' | 'winter' | 'resend', 
-    solarTermMsg: string, 
-    leaderMsg: string
+    solarTermMsg: string | null, 
+    leaderMsg: string,
+    dailyWisdom: string
 ): string => {
     let msg = '';
     
@@ -50,7 +54,11 @@ const buildReminderMessage = (
     } else if (mode === 'resend') {
         msg = `📣 補發提醒：還沒打卡的同學，現在就來完成！\n\n每天一點點，身心更穩定。\n今天完成，就能守住你的習慣與連勝。`;
     } else {
-        msg = `🌙 晚安！氣功時間到了！\n\n${solarTermMsg}\n\n「練功如春起之苗，不見其增，日有所長。」\n今天練習了嗎？記得完成打卡，守住你的節奏！\n\n${leaderMsg}`;
+        if (solarTermMsg) {
+            msg = `🌿 ${solarTermMsg}\n\n順時養生，順勢練功。今天也別忘了完成打卡喔！\n\n${leaderMsg}`;
+        } else {
+            msg = `🌙 晚安！氣功時間到了！\n\n${dailyWisdom}\n\n大家今天練習了嗎？記得完成打卡，守住你的節奏！\n\n${leaderMsg}`;
+        }
     }
 
     if (CHECKIN_SHORTCUT_URL) {
@@ -73,17 +81,20 @@ export const sendDailyReminder = async (modeOverride?: 'resend') => {
         // Generate Solar Term (節氣) Info
         const today = new Date();
         const lunar = Lunar.fromDate(today);
-        let solarTermMsg = '';
+        let solarTermMsg: string | null = null;
         
         const currentJieQi = lunar.getJieQi();
-        const nextJieQi = lunar.getNextJieQi();
-        
+        // If today is exactly the day of a Solar Term
         if (currentJieQi) {
-            solarTermMsg = `今天是${currentJieQi}！`;
-        } else {
-            const nextJieQiDate = nextJieQi.getSolar().toYmd();
-            solarTermMsg = `距離下一個節氣「${nextJieQi.getName()}」還有幾天 (${nextJieQiDate})。`;
+            const guide = getSolarTermGuide(currentJieQi);
+            if (guide) {
+                solarTermMsg = `今日節氣：${currentJieQi}\n\n${guide}`;
+            }
         }
+
+        // Daily Wisdom logic
+        const nowTz = moment().tz(TIMEZONE);
+        const dailyWisdom = getDailyWisdom(nowTz);
 
         // Leaderboard Highlight (e.g. random top 3 streaks)
         const leaderResult = await db.query(
@@ -98,9 +109,10 @@ export const sendDailyReminder = async (modeOverride?: 'resend') => {
         }
 
         const messageText = buildReminderMessage(
-            modeOverride || (isSummerChallengePeriod(moment().tz(TIMEZONE)) ? 'summer' : isWinterChallengePeriod(moment().tz(TIMEZONE)) ? 'winter' : 'normal'),
+            modeOverride || (isSummerChallengePeriod(nowTz) ? 'summer' : isWinterChallengePeriod(nowTz) ? 'winter' : 'normal'),
             solarTermMsg,
-            leaderMsg
+            leaderMsg,
+            dailyWisdom
         );
 
         if (!CHECKIN_SHORTCUT_URL) {
