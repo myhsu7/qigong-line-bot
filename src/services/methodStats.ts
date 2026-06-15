@@ -5,10 +5,10 @@ const TIMEZONE = 'Asia/Taipei';
 
 // 1. Method Dictionary Definition
 export const methodDictionary = [
-    { name: '大雁功', aliases: ['大雁功'] },
-    { name: '回春功', aliases: ['回春功'] },
+    { name: '大雁功', aliases: ['大雁功', '大雁初高', '大雁初級', '大雁高級'] },
+    { name: '回春功', aliases: ['回春功', '回春'] },
     { name: '龜壽功', aliases: ['龜壽功'] },
-    { name: '正陽功', aliases: ['正陽功'] },
+    { name: '正陽功', aliases: ['正陽功', '正陽晨功'] },
     { name: '神奇晃海功', aliases: ['神奇晃海功', '晃海功', '晃海'] },
     { name: '和氣舒壓法', aliases: ['和氣舒壓法', '和氣', '舒壓法'] },
     { name: '蓮花', aliases: ['蓮花', '蓮花功'] }
