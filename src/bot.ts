@@ -104,6 +104,12 @@ export const handleEvent = async (event: webhook.Event): Promise<any> => {
     const text = event.message.text.trim();
     const replyToken = event.replyToken as string;
 
+    // LIFF sends the success summary as a user message back into the chat.
+    // Ignore it so the bot does not respond with the fallback unknown-command message.
+    if (text.startsWith('✅ 打卡成功')) {
+        return null;
+    }
+
     // Retrieve user profile if not exist in DB
     const profile = await client.getProfile(userId);
     await db.query(
