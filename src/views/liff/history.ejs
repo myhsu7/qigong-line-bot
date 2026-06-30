@@ -25,6 +25,9 @@
     .method-tag { background: #ecfdf5; color: #065f46; border-radius: 6px; padding: 3px 8px; font-size: 12px; font-weight: 500; }
     .history-note { font-size: 13px; color: #6b7280; line-height: 1.5; }
     .history-note strong { color: #374151; }
+    .badge-card-title { font-size: 16px; font-weight: 700; margin: 0 0 12px; }
+    .badge-list { display: flex; flex-wrap: wrap; gap: 8px; }
+    .badge-item { background: #fff7ed; color: #9a3412; border-radius: 999px; padding: 6px 10px; font-size: 13px; font-weight: 600; }
     .empty { text-align: center; color: #9ca3af; padding: 32px 0; font-size: 14px; }
     .loading { text-align: center; color: #6b7280; padding: 32px 0; }
     .weekday { font-size: 12px; color: #9ca3af; font-weight: 400; margin-left: 6px; }
@@ -46,6 +49,13 @@
       <div class="stat-card">
         <div class="stat-value" id="statTotal">-</div>
         <div class="stat-label">總打卡</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="badge-card-title">我的勳章</h2>
+      <div id="badgeContainer">
+        <div class="loading">載入中...</div>
       </div>
     </div>
 
@@ -73,6 +83,7 @@
     const statStreak = document.getElementById('statStreak');
     const statLongest = document.getElementById('statLongest');
     const statTotal = document.getElementById('statTotal');
+    const badgeContainer = document.getElementById('badgeContainer');
 
     const apiFetch = async (url, options = {}) => {
       const headers = new Headers(options.headers || {});
@@ -100,6 +111,16 @@
       statStreak.textContent = data.stats ? `${data.stats.currentStreak}天` : '-';
       statLongest.textContent = data.stats ? `${data.stats.longestStreak}天` : '-';
       statTotal.textContent = data.stats ? `${data.stats.totalCheckins}天` : '-';
+
+      if (!data.badges || data.badges.length === 0) {
+        badgeContainer.innerHTML = '<div class="empty">目前還沒有勳章，快去打卡解鎖吧！</div>';
+      } else {
+        badgeContainer.innerHTML = `<div class="badge-list">${data.badges.map((badge) => {
+          const countText = badge.count > 1 ? ` (x${badge.count})` : '';
+          const yearsText = badge.years && badge.years.length > 0 ? ` [${badge.years.join(', ')}]` : '';
+          return `<span class="badge-item">${badge.emoji || '🏅'} ${badge.name}${countText}${yearsText}</span>`;
+        }).join('')}</div>`;
+      }
 
       if (!data.entries || data.entries.length === 0) {
         historyContainer.innerHTML = '<div class="empty">此月份尚無打卡紀錄</div>';

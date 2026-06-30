@@ -248,6 +248,33 @@ router.get('/history', async (req, res) => {
             [lineUserId, monthStart, monthEnd]
         );
 
+        const badgesRes = await db.query(
+            `SELECT b.emoji, b.name, u.earned_year
+             FROM user_badges u
+             JOIN badges b ON u.badge_id = b.id
+             WHERE u.line_user_id = $1
+             ORDER BY u.unlocked_at ASC`,
+            [lineUserId]
+        );
+
+        const badgeMap = new Map<string, { emoji: string; name: string; count: number; years: string[] }>();
+        badgesRes.rows.forEach((badge) => {
+            const key = badge.name;
+            const existing: { emoji: string; name: string; count: number; years: string[] } = badgeMap.get(key) || {
+                emoji: badge.emoji || '',
+                name: badge.name,
+                count: 0,
+                years: []
+            };
+
+            existing.count += 1;
+            if (badge.earned_year && badge.earned_year !== 0) {
+                existing.years.push(String(badge.earned_year));
+            }
+
+            badgeMap.set(key, existing);
+        });
+
         res.json({
             month: targetMonth.format('YYYY-MM'),
             monthLabel: targetMonth.format('YYYY年 MM月'),
@@ -267,7 +294,8 @@ router.get('/history', async (req, res) => {
                       totalCheckins: userStats.rows[0].total_checkins || 0,
                   }
                 : null,
-            checkinDaysInMonth: Number(checkinDaysInMonth.rows[0]?.count || 0)
+            checkinDaysInMonth: Number(checkinDaysInMonth.rows[0]?.count || 0),
+            badges: Array.from(badgeMap.values())
         });
     } catch (error) {
         console.error('[liff-api] failed to load history', error);
