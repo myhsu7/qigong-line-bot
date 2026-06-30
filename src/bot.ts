@@ -16,6 +16,24 @@ const client = new messagingApi.MessagingApiClient(lineConfig);
 const LIFF_ID = process.env.LIFF_ID || '';
 const LINE_LIFF_CHECKIN_URL = LIFF_ID ? `https://liff.line.me/${LIFF_ID}` : (process.env.LINE_LIFF_CHECKIN_URL || '');
 
+const buildLineLiffEntryUrl = (page?: string, extraParams?: Record<string, string>) => {
+    if (!LINE_LIFF_CHECKIN_URL) return '';
+
+    const url = new URL(LINE_LIFF_CHECKIN_URL);
+    if (page) url.searchParams.set('page', page);
+
+    if (extraParams) {
+        Object.entries(extraParams).forEach(([key, value]) => {
+            if (value) url.searchParams.set(key, value);
+        });
+    }
+
+    return url.toString();
+};
+
+const LINE_LIFF_LEADERBOARD_URL = buildLineLiffEntryUrl('leaderboard', { period: 'all' });
+const LINE_LIFF_HISTORY_URL = buildLineLiffEntryUrl('history');
+
 // Simple in-memory state for user sessions
 const userStates = new Map<string, string>();
 
@@ -140,21 +158,64 @@ export const handleEvent = async (event: webhook.Event): Promise<any> => {
     }
 
     if (text === '🏆 Weekly Leaderboard') {
+        const leaderboardUrl = buildLineLiffEntryUrl('leaderboard', { period: 'week' });
+        if (leaderboardUrl) {
+            return client.replyMessage({
+                replyToken,
+                messages: [{
+                    type: 'text',
+                    text: `請點下方連結開啟週排行榜：\n${leaderboardUrl}`
+                }]
+            });
+        }
+
         const msg = await buildPeriodLeaderboardText('week');
         return client.replyMessage({ replyToken, messages: [{ type: 'text', text: msg }] });
     }
 
     if (text === '🏆 Monthly Leaderboard') {
+        const leaderboardUrl = buildLineLiffEntryUrl('leaderboard', { period: 'month' });
+        if (leaderboardUrl) {
+            return client.replyMessage({
+                replyToken,
+                messages: [{
+                    type: 'text',
+                    text: `請點下方連結開啟月排行榜：\n${leaderboardUrl}`
+                }]
+            });
+        }
+
         const msg = await buildPeriodLeaderboardText('month');
         return client.replyMessage({ replyToken, messages: [{ type: 'text', text: msg }] });
     }
 
     if (text === '🏆 Quarterly Leaderboard') {
+        const leaderboardUrl = buildLineLiffEntryUrl('leaderboard', { period: 'quarter' });
+        if (leaderboardUrl) {
+            return client.replyMessage({
+                replyToken,
+                messages: [{
+                    type: 'text',
+                    text: `請點下方連結開啟季排行榜：\n${leaderboardUrl}`
+                }]
+            });
+        }
+
         const msg = await buildPeriodLeaderboardText('quarter');
         return client.replyMessage({ replyToken, messages: [{ type: 'text', text: msg }] });
     }
 
     if (text === '🏆 Leaderboard') {
+        if (LINE_LIFF_LEADERBOARD_URL) {
+            return client.replyMessage({
+                replyToken,
+                messages: [{
+                    type: 'text',
+                    text: `請點下方連結開啟排行榜：\n${LINE_LIFF_LEADERBOARD_URL}`
+                }]
+            });
+        }
+
         const topStreaks = await db.query('SELECT display_name, longest_streak FROM users WHERE longest_streak > 0 ORDER BY longest_streak DESC LIMIT 10');
         const topTotals = await db.query('SELECT display_name, total_checkins FROM users WHERE total_checkins > 0 ORDER BY total_checkins DESC LIMIT 10');
 
@@ -174,6 +235,16 @@ export const handleEvent = async (event: webhook.Event): Promise<any> => {
     }
 
     if (text === '📊 My Stats') {
+        if (LINE_LIFF_HISTORY_URL) {
+            return client.replyMessage({
+                replyToken,
+                messages: [{
+                    type: 'text',
+                    text: `請點下方連結開啟打卡紀錄：\n${LINE_LIFF_HISTORY_URL}`
+                }]
+            });
+        }
+
         const userStats = await db.query('SELECT current_streak, longest_streak, total_checkins FROM users WHERE line_user_id = $1', [userId]);
         if (userStats.rows.length > 0) {
             const row = userStats.rows[0];

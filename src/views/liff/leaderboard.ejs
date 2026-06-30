@@ -57,8 +57,9 @@
   <script>
     const LIFF_ID = '<%= liffId %>';
     let lineUserId = '';
-    let currentPeriod = 'week';
-    let currentRankBy = 'checkins';
+    const initialParams = new URLSearchParams(window.location.search);
+    let currentPeriod = initialParams.get('period') || 'all';
+    let currentRankBy = initialParams.get('rankBy') || 'checkins';
 
     const periodTabs = document.getElementById('periodTabs');
     const periodLabel = document.getElementById('periodLabel');
@@ -103,20 +104,28 @@
       }
     };
 
+    const syncActiveControls = () => {
+      periodTabs.querySelectorAll('.tab').forEach((tab) => {
+        tab.classList.toggle('active', tab.dataset.period === currentPeriod);
+      });
+
+      document.querySelectorAll('.rank-type-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.rankby === currentRankBy);
+      });
+    };
+
     periodTabs.addEventListener('click', (e) => {
       const tab = e.target.closest('.tab');
       if (!tab) return;
-      periodTabs.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
-      tab.classList.add('active');
       currentPeriod = tab.dataset.period;
+      syncActiveControls();
       loadLeaderboard();
     });
 
     document.querySelectorAll('.rank-type-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.rank-type-btn').forEach((b) => b.classList.remove('active'));
-        btn.classList.add('active');
         currentRankBy = btn.dataset.rankby;
+        syncActiveControls();
         loadLeaderboard();
       });
     });
@@ -129,6 +138,7 @@
       }
       const profile = await liff.getProfile();
       lineUserId = profile.userId;
+      syncActiveControls();
       loadLeaderboard();
     };
 
