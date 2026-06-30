@@ -68,7 +68,6 @@
     const apiFetch = async (url, options = {}) => {
       const headers = new Headers(options.headers || {});
       headers.set('x-line-user-id', lineUserId);
-      headers.set('x-line-display-name', displayName);
       if (!headers.has('Content-Type') && options.method && options.method !== 'GET') {
         headers.set('Content-Type', 'application/json');
       }
@@ -164,6 +163,7 @@
             methodIds: [...methodIds],
             methodIdsCsv: methodIds.join(','),
             methodCount: selectedCount,
+            displayName,
             reflectionNote: reflectionNote.value,
             bodyFeelingNote: bodyFeelingNote.value
           })
