@@ -12,6 +12,8 @@ import adminApiRoutes from './routes/adminApi';
 import adminPagesRoutes from './routes/adminPages';
 import adminMethodAnalysisApiRoutes from './routes/adminMethodAnalysisApi';
 import adminMethodAnalysisPagesRoutes from './routes/adminMethodAnalysisPages';
+import liffApiRoutes from './routes/liffApi';
+import liffPagesRoutes from './routes/liffPages';
 
 dotenv.config();
 
@@ -43,6 +45,8 @@ app.use('/line/admin-dashboard/method-analysis', adminMiddleware, adminMethodAna
 app.use('/line/admin-dashboard', adminMiddleware, adminPagesRoutes);
 app.use('/line/api/admin/method-analysis', adminMiddleware, adminMethodAnalysisApiRoutes);
 app.use('/line/api/admin', adminMiddleware, adminApiRoutes);
+app.use('/line/api/liff', liffApiRoutes);
+app.use('/line/liff', liffPagesRoutes);
 
 app.get('/', (req, res) => {
     res.send('Qigong LINE Bot is running.');

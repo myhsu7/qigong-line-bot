@@ -13,6 +13,7 @@ const lineConfig = {
 };
 
 const client = new messagingApi.MessagingApiClient(lineConfig);
+const LINE_LIFF_CHECKIN_URL = process.env.LINE_LIFF_CHECKIN_URL || '';
 
 // Simple in-memory state for user sessions
 const userStates = new Map<string, string>();
@@ -113,6 +114,17 @@ export const handleEvent = async (event: webhook.Event): Promise<any> => {
     const currentState = userStates.get(userId);
 
     if (text === '✅ Check-In') {
+        if (LINE_LIFF_CHECKIN_URL) {
+            return client.replyMessage({
+                replyToken,
+                messages: [{
+                    type: 'text',
+                    text: `請點下方連結開啟打卡表單：\n${LINE_LIFF_CHECKIN_URL}`
+                }]
+            });
+        }
+
+        // Fallback to legacy text flow if LIFF URL is not configured
         userStates.set(userId, 'WAITING_FOR_NOTE');
         return client.replyMessage({
             replyToken,

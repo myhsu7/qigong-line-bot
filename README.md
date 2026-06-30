@@ -58,6 +58,8 @@ LINE_CHANNEL_SECRET=your_channel_secret
 DATABASE_URL=postgres://qigong_user:qigong_password@localhost:5432/qigong_bot
 ADMIN_USER_ID=your_line_user_id
 LINE_BOT_SHORTCUT_URL=https://line.me/R/oaMessage/%40your_oa_id/?%E2%9C%85%20Check-In
+LIFF_ID=your_liff_id
+LINE_LIFF_CHECKIN_URL=https://your-domain.example.com/line/liff/checkin
 ADMIN_DASH_USER=admin
 ADMIN_DASH_PASS=your_strong_password
 ADMIN_ALLOWED_IP_PREFIX=100.
@@ -65,6 +67,8 @@ ADMIN_ALLOWED_IP_PREFIX=100.
 *(If you are using the provided Docker setup, the default DB credentials will work immediately).*
 *(For `ADMIN_USER_ID`, this is your personal LINE user ID, needed to execute `!admin` commands).*
 *(For `LINE_BOT_SHORTCUT_URL`, this is the deep link added to daily reminders allowing users to quickly open the 1-on-1 chat with a prefilled check-in message).*
+*(For `LIFF_ID`, this is the LINE LIFF app id used by the structured check-in page).*
+*(For `LINE_LIFF_CHECKIN_URL`, this is the URL that the bot uses when a user taps `✅ Check-In`; it should point to `/line/liff/checkin`).*
 
 ⚠️ **Important:** `ADMIN_USER_ID` is **NOT** your regular LINE ID (the one you give friends to add you). It is your Developer User ID, which always starts with the letter `U` (e.g., `U1234567890abcdef...`). You can find this ID in the [LINE Developer Console](https://developers.line.biz/console/) by navigating to your Provider -> your Messaging API Channel -> clicking the **Basic settings** tab and scrolling all the way to the bottom to "**Your user ID**".
 
@@ -169,6 +173,59 @@ If you have configured `ADMIN_USER_ID` in your `.env` file, you can type these c
 - `!admin register_group`: Register the current group for daily broadcasts.
 - `!admin resend-reminder`: Manually trigger the 8:00 PM daily reminder broadcast.
 - `!admin broadcast [message]`: Send an ad-hoc custom message to all registered active groups.
+
+## LINE LIFF Structured Check-In
+
+The LINE bot now supports a LIFF-based structured check-in flow.
+
+### User flow
+
+1. User taps `✅ Check-In` in the 1-on-1 chat.
+2. Bot replies with a LIFF link (`LINE_LIFF_CHECKIN_URL`).
+3. User opens the LIFF page and:
+   - selects one or more practice methods
+   - optionally fills reflection note
+   - optionally fills body feeling note
+4. Submit saves today's check-in.
+5. If the user already checked in today, the LIFF page prefills today's content and allows overwrite update without increasing total days twice.
+
+### Routes
+
+- `GET /line/liff/checkin`
+- `GET /line/api/liff/practice-methods`
+- `GET /line/api/liff/checkin/today`
+- `POST /line/api/liff/checkin`
+
+### Database migration
+
+Run this migration to enable structured check-in:
+
+```bash
+docker exec -i qigong_db psql -U qigong_user -d qigong_bot < migrations/003_line_liff_structured_checkin.sql
+```
+
+This migration adds:
+
+- `practice_methods`
+- `checkin_method_selections`
+- structured fields on `checkin_logs`
+
+### LIFF setup in LINE Developers Console
+
+1. Create a new LIFF app under your LINE channel.
+2. Set the endpoint URL to:
+
+```text
+https://your-domain.example.com/line/liff/checkin
+```
+
+3. Copy the generated `LIFF_ID` into `.env`.
+
+### Compatibility
+
+- New structured check-ins are stored in `checkin_method_selections`.
+- Existing text-only history is preserved.
+- Method analysis now prefers structured selections and falls back to note text matching for older records.
 
 ## 📈 Admin Dashboard (Web)
 

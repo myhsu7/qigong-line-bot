@@ -6,12 +6,15 @@ const TIMEZONE = 'Asia/Taipei';
 // 1. Method Dictionary Definition
 export const methodDictionary = [
     { name: '大雁功', aliases: ['大雁功', '大雁初高', '大雁初級', '大雁高級'] },
+    { name: '五禽戲', aliases: ['五禽戲'] },
     { name: '回春功', aliases: ['回春功', '回春'] },
     { name: '龜壽功', aliases: ['龜壽功'] },
     { name: '正陽功', aliases: ['正陽功', '正陽晨功'] },
     { name: '神奇晃海功', aliases: ['神奇晃海功', '晃海功', '晃海'] },
+    { name: '蓮花養心法', aliases: ['蓮花養心法', '蓮花', '蓮花功'] },
     { name: '和氣舒壓法', aliases: ['和氣舒壓法', '和氣', '舒壓法'] },
-    { name: '蓮花', aliases: ['蓮花', '蓮花功'] }
+    { name: '三窩功', aliases: ['三窩功'] },
+    { name: '六音理臟法', aliases: ['六音理臟法'] }
 ];
 
 export type MethodPeriod = '30d' | '90d' | 'month' | 'quarter' | 'year';
@@ -78,17 +81,30 @@ export const getCommunityMethodSummary = async (period: MethodPeriod = '30d') =>
 
     const query = `
         ${getDictCTE()},
-        logs AS (
-            SELECT line_user_id, (created_at AT TIME ZONE $1)::date AS local_date, COALESCE(note, '') AS note
-            FROM checkin_logs
-            WHERE created_at >= $2 AND created_at < $3
+        structured AS (
+            SELECT DISTINCT l.line_user_id, l.checkin_date AS local_date, pm.name_zh AS method_name
+            FROM checkin_logs l
+            JOIN checkin_method_selections s ON s.checkin_log_id = l.id
+            JOIN practice_methods pm ON pm.id = s.practice_method_id
+            WHERE l.created_at >= $2 AND l.created_at < $3
         ),
-        matched AS (
+        fallback_logs AS (
+            SELECT l.id, l.line_user_id, (l.created_at AT TIME ZONE $1)::date AS local_date, COALESCE(l.note, '') AS note
+            FROM checkin_logs l
+            LEFT JOIN checkin_method_selections s ON s.checkin_log_id = l.id
+            WHERE l.created_at >= $2 AND l.created_at < $3 AND s.id IS NULL
+        ),
+        fallback_matched AS (
             SELECT DISTINCT l.line_user_id, l.local_date, md.method_name
-            FROM logs l
+            FROM fallback_logs l
             JOIN method_dict md ON EXISTS (
                 SELECT 1 FROM unnest(md.aliases) a WHERE l.note ILIKE '%' || a || '%'
             )
+        ),
+        matched AS (
+            SELECT * FROM structured
+            UNION ALL
+            SELECT * FROM fallback_matched
         )
         SELECT method_name, COUNT(*) AS matched_days
         FROM matched
@@ -136,17 +152,30 @@ export const getUserMethodAnalysis = async (userId: string, period: MethodPeriod
 
     const query = `
         ${getDictCTE()},
-        logs AS (
-            SELECT (created_at AT TIME ZONE $1)::date AS local_date, COALESCE(note, '') AS note
-            FROM checkin_logs
-            WHERE line_user_id = $2 AND created_at >= $3 AND created_at < $4
+        structured AS (
+            SELECT DISTINCT l.checkin_date AS local_date, pm.name_zh AS method_name
+            FROM checkin_logs l
+            JOIN checkin_method_selections s ON s.checkin_log_id = l.id
+            JOIN practice_methods pm ON pm.id = s.practice_method_id
+            WHERE l.line_user_id = $2 AND l.created_at >= $3 AND l.created_at < $4
         ),
-        matched AS (
+        fallback_logs AS (
+            SELECT l.id, (l.created_at AT TIME ZONE $1)::date AS local_date, COALESCE(l.note, '') AS note
+            FROM checkin_logs l
+            LEFT JOIN checkin_method_selections s ON s.checkin_log_id = l.id
+            WHERE l.line_user_id = $2 AND l.created_at >= $3 AND l.created_at < $4 AND s.id IS NULL
+        ),
+        fallback_matched AS (
             SELECT DISTINCT l.local_date, md.method_name
-            FROM logs l
+            FROM fallback_logs l
             JOIN method_dict md ON EXISTS (
                 SELECT 1 FROM unnest(md.aliases) a WHERE l.note ILIKE '%' || a || '%'
             )
+        ),
+        matched AS (
+            SELECT * FROM structured
+            UNION ALL
+            SELECT * FROM fallback_matched
         )
         SELECT method_name, COUNT(*) AS matched_days
         FROM matched
