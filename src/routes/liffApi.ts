@@ -177,10 +177,10 @@ router.get('/leaderboard', async (req, res) => {
         if (period === 'all') {
             if (rankBy === 'streak') {
                 const { rows } = await db.query('SELECT display_name, longest_streak AS value FROM users WHERE longest_streak > 0 ORDER BY longest_streak DESC LIMIT 10');
-                return res.json({ period: 'all', rankBy, label: '總排行榜', entries: rows.map((r) => ({ displayName: r.display_name, value: r.longest_streak })) });
+                return res.json({ period: 'all', rankBy, label: '總排行榜', entries: rows.map((r) => ({ displayName: r.display_name, value: Number(r.value) })) });
             }
             const { rows } = await db.query('SELECT display_name, total_checkins AS value FROM users WHERE total_checkins > 0 ORDER BY total_checkins DESC LIMIT 10');
-            return res.json({ period: 'all', rankBy, label: '總排行榜', entries: rows.map((r) => ({ displayName: r.display_name, value: r.total_checkins })) });
+            return res.json({ period: 'all', rankBy, label: '總排行榜', entries: rows.map((r) => ({ displayName: r.display_name, value: Number(r.value) })) });
         }
 
         const range = getPeriodRange(period);
