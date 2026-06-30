@@ -20,9 +20,6 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
 // Setup EJS for Admin Dashboard
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -41,6 +38,11 @@ app.post('/line/webhook', middleware(config), (req, res) => {
             res.status(500).end();
         });
 });
+
+// Important: body parsers must be registered after LINE webhook middleware,
+// otherwise the raw body is mutated before signature verification.
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Admin Dashboard Routes
 const adminMiddleware = [requireTailscaleInternal, requireAdminBasicAuth, resolveLanguage];
