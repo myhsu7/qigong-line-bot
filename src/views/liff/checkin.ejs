@@ -90,7 +90,12 @@
       });
     };
 
-    const getSelectedMethodIds = () => [...document.querySelectorAll('input[name="methods"]:checked')].map((el) => Number(el.value));
+    const getSelectedMethodIds = () => {
+      const checked = Array.from(methodsContainer.querySelectorAll('input[name="methods"]:checked'));
+      return checked
+        .map((el) => Number(el.value))
+        .filter((id) => Number.isFinite(id) && id > 0);
+    };
 
     const ensureLiffLogin = async () => {
       await liff.init({ liffId: LIFF_ID });
@@ -149,10 +154,12 @@
       setStatus(submitStatus, '正在儲存打卡資料...');
 
       try {
+        const selectedCount = methodIds.length;
         const result = await apiFetch('/line/api/liff/checkin', {
           method: 'POST',
           body: JSON.stringify({
-            methodIds,
+            methodIds: [...methodIds],
+            methodCount: selectedCount,
             reflectionNote: reflectionNote.value,
             bodyFeelingNote: bodyFeelingNote.value
           })
