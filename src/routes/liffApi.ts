@@ -1,6 +1,7 @@
 import { Request, Router } from 'express';
 import { getPracticeMethods, getTodayLineCheckin, saveTodayLineCheckin, upsertLineUser, evaluateLineLiffBadges } from '../services/lineCheckin';
 import { db } from '../db';
+import moment from 'moment-timezone';
 
 const router = Router();
 
@@ -90,6 +91,187 @@ router.get('/checkin/today', async (req, res) => {
     } catch (error) {
         console.error('[liff-api] failed to load today checkin', error);
         res.status(500).json({ error: 'Failed to load today checkin' });
+    }
+});
+
+const TIMEZONE = 'Asia/Taipei';
+
+const getPeriodRange = (period: string) => {
+    const now = moment().tz(TIMEZONE);
+    switch (period) {
+        case 'week': {
+            const start = now.clone().startOf('isoWeek');
+            const end = now.clone().endOf('isoWeek').add(1, 'millisecond');
+            return { start: start.toDate(), end: end.toDate(), label: '本週', displayRange: `${start.format('MM/DD')} ~ ${now.clone().endOf('isoWeek').format('MM/DD')}` };
+        }
+        case 'month': {
+            const start = now.clone().startOf('month');
+            const end = now.clone().endOf('month').add(1, 'millisecond');
+            return { start: start.toDate(), end: end.toDate(), label: '本月', displayRange: `${start.format('MM/DD')} ~ ${now.clone().endOf('month').format('MM/DD')}` };
+        }
+        case 'quarter': {
+            const start = now.clone().startOf('quarter');
+            const end = now.clone().endOf('quarter').add(1, 'millisecond');
+            return { start: start.toDate(), end: end.toDate(), label: '本季', displayRange: `${now.year()} Q${now.quarter()} (${start.format('MM/DD')} ~ ${now.clone().endOf('quarter').format('MM/DD')})` };
+        }
+        default:
+            return null;
+    }
+};
+
+const computeStreaksInRange = async (start: Date, end: Date) => {
+    const query = `
+        SELECT c.line_user_id, u.display_name, DATE(c.created_at AT TIME ZONE $1) AS d
+        FROM checkin_logs c
+        JOIN users u ON u.line_user_id = c.line_user_id
+        WHERE c.created_at >= $2 AND c.created_at < $3
+        GROUP BY c.line_user_id, u.display_name, d
+        ORDER BY c.line_user_id, d ASC;
+    `;
+    const { rows } = await db.query(query, [TIMEZONE, start, end]);
+    if (rows.length === 0) return [];
+
+    const userStreaks = new Map<string, { displayName: string; maxStreak: number }>();
+    let currentUserId = '';
+    let currentDisplayName = '';
+    let currentStreak = 0;
+    let maxStreak = 0;
+    let lastDate: moment.Moment | null = null;
+
+    const processingRows = [...rows, { line_user_id: '__dummy__', display_name: '', d: '2000-01-01' }];
+    for (const row of processingRows) {
+        if (row.line_user_id !== currentUserId) {
+            if (currentUserId !== '') {
+                userStreaks.set(currentUserId, { displayName: currentDisplayName, maxStreak });
+            }
+            currentUserId = row.line_user_id;
+            currentDisplayName = row.display_name;
+            currentStreak = 1;
+            maxStreak = 1;
+            lastDate = moment.tz(row.d, TIMEZONE);
+        } else {
+            const rowDate = moment.tz(row.d, TIMEZONE);
+            if (lastDate && rowDate.diff(lastDate, 'days') === 1) {
+                currentStreak++;
+                if (currentStreak > maxStreak) maxStreak = currentStreak;
+            } else {
+                currentStreak = 1;
+            }
+            lastDate = rowDate;
+        }
+    }
+
+    return Array.from(userStreaks.values())
+        .sort((a, b) => {
+            if (b.maxStreak !== a.maxStreak) return b.maxStreak - a.maxStreak;
+            return a.displayName.localeCompare(b.displayName);
+        })
+        .slice(0, 10);
+};
+
+router.get('/leaderboard', async (req, res) => {
+    try {
+        const period = (req.query.period || 'all').toString();
+        const rankBy = (req.query.rankBy || 'checkins').toString();
+
+        if (period === 'all') {
+            if (rankBy === 'streak') {
+                const { rows } = await db.query('SELECT display_name, longest_streak AS value FROM users WHERE longest_streak > 0 ORDER BY longest_streak DESC LIMIT 10');
+                return res.json({ period: 'all', rankBy, label: '總排行榜', entries: rows.map((r) => ({ displayName: r.display_name, value: r.longest_streak })) });
+            }
+            const { rows } = await db.query('SELECT display_name, total_checkins AS value FROM users WHERE total_checkins > 0 ORDER BY total_checkins DESC LIMIT 10');
+            return res.json({ period: 'all', rankBy, label: '總排行榜', entries: rows.map((r) => ({ displayName: r.display_name, value: r.total_checkins })) });
+        }
+
+        const range = getPeriodRange(period);
+        if (!range) return res.status(400).json({ error: 'Invalid period. Use week, month, quarter, or all.' });
+
+        if (rankBy === 'streak') {
+            const streaks = await computeStreaksInRange(range.start, range.end);
+            return res.json({ period, rankBy, label: range.label, displayRange: range.displayRange, entries: streaks.map((s) => ({ displayName: s.displayName, value: s.maxStreak })) });
+        }
+
+        const query = `
+            SELECT u.display_name, COUNT(DISTINCT DATE(c.created_at AT TIME ZONE $1)) AS value
+            FROM checkin_logs c
+            JOIN users u ON u.line_user_id = c.line_user_id
+            WHERE c.created_at >= $2 AND c.created_at < $3
+            GROUP BY u.display_name
+            ORDER BY value DESC, u.display_name ASC
+            LIMIT 10;
+        `;
+        const { rows } = await db.query(query, [TIMEZONE, range.start, range.end]);
+        res.json({ period, rankBy, label: range.label, displayRange: range.displayRange, entries: rows.map((r) => ({ displayName: r.display_name, value: Number(r.value) })) });
+    } catch (error) {
+        console.error('[liff-api] failed to load leaderboard', error);
+        res.status(500).json({ error: 'Failed to load leaderboard' });
+    }
+});
+
+router.get('/history', async (req, res) => {
+    try {
+        const { lineUserId } = resolveLineUser(req);
+        if (!lineUserId) return res.status(400).json({ error: 'Missing lineUserId' });
+
+        const now = moment().tz(TIMEZONE);
+        const monthParam = req.query.month?.toString();
+        let targetMonth: moment.Moment;
+        if (monthParam) {
+            targetMonth = moment.tz(monthParam, 'YYYY-MM', TIMEZONE);
+            if (!targetMonth.isValid()) targetMonth = now.clone();
+        } else {
+            targetMonth = now.clone();
+        }
+
+        const monthStart = targetMonth.clone().startOf('month').format('YYYY-MM-DD');
+        const monthEnd = targetMonth.clone().endOf('month').format('YYYY-MM-DD');
+
+        const logs = await db.query(
+            `SELECT cl.id, cl.checkin_date, cl.note, cl.reflection_note, cl.body_feeling_note, cl.source,
+                    ARRAY_AGG(pm.name_zh ORDER BY pm.sort_order ASC) AS method_names
+             FROM checkin_logs cl
+             LEFT JOIN checkin_method_selections cms ON cms.checkin_log_id = cl.id
+             LEFT JOIN practice_methods pm ON pm.id = cms.practice_method_id
+             WHERE cl.line_user_id = $1 AND cl.checkin_date >= $2 AND cl.checkin_date <= $3
+             GROUP BY cl.id
+             ORDER BY cl.checkin_date DESC`,
+            [lineUserId, monthStart, monthEnd]
+        );
+
+        const userStats = await db.query(
+            'SELECT current_streak, longest_streak, total_checkins FROM users WHERE line_user_id = $1',
+            [lineUserId]
+        );
+
+        const checkinDaysInMonth = await db.query(
+            'SELECT COUNT(DISTINCT checkin_date) AS count FROM checkin_logs WHERE line_user_id = $1 AND checkin_date >= $2 AND checkin_date <= $3',
+            [lineUserId, monthStart, monthEnd]
+        );
+
+        res.json({
+            month: targetMonth.format('YYYY-MM'),
+            monthLabel: targetMonth.format('YYYY年 MM月'),
+            entries: logs.rows.map((row) => ({
+                id: row.id,
+                date: row.checkin_date,
+                methodNames: row.method_names.filter((n: string | null) => n !== null),
+                note: row.note,
+                reflectionNote: row.reflection_note,
+                bodyFeelingNote: row.body_feeling_note,
+                source: row.source
+            })),
+            stats: userStats.rows[0]
+                ? {
+                      currentStreak: userStats.rows[0].current_streak || 0,
+                      longestStreak: userStats.rows[0].longest_streak || 0,
+                      totalCheckins: userStats.rows[0].total_checkins || 0,
+                  }
+                : null,
+            checkinDaysInMonth: Number(checkinDaysInMonth.rows[0]?.count || 0)
+        });
+    } catch (error) {
+        console.error('[liff-api] failed to load history', error);
+        res.status(500).json({ error: 'Failed to load history' });
     }
 });
 

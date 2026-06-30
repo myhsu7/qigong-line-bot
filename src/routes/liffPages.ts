@@ -9,4 +9,18 @@ router.get('/checkin', (req, res) => {
     });
 });
 
+router.get('/leaderboard', (req, res) => {
+    res.render('liff/leaderboard', {
+        liffId: process.env.LIFF_ID || '',
+        path: '/line/liff/leaderboard'
+    });
+});
+
+router.get('/history', (req, res) => {
+    res.render('liff/history', {
+        liffId: process.env.LIFF_ID || '',
+        path: '/line/liff/history'
+    });
+});
+
 export default router;

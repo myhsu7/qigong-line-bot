@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>排行榜</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; background: #f6f7fb; color: #1f2937; }
+    .container { max-width: 640px; margin: 0 auto; padding: 20px; }
+    .card { background: #fff; border-radius: 14px; padding: 20px; box-shadow: 0 8px 24px rgba(0,0,0,.08); margin-bottom: 16px; }
+    h1 { font-size: 24px; margin: 0 0 16px; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; }
+    .tab { flex: 1; min-width: 0; background: #e5e7eb; border: 0; border-radius: 10px; padding: 10px 8px; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; text-align: center; }
+    .tab.active { background: #06c755; color: #fff; }
+    .rank-type-toggle { display: flex; gap: 8px; margin-bottom: 12px; }
+    .rank-type-btn { flex: 1; background: #e5e7eb; border: 0; border-radius: 10px; padding: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .rank-type-btn.active { background: #1f2937; color: #fff; }
+    .period-label { font-size: 14px; color: #6b7280; margin-bottom: 12px; }
+    .rank-list { list-style: none; padding: 0; margin: 0; }
+    .rank-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f3f4f6; }
+    .rank-item:last-child { border-bottom: 0; }
+    .rank-num { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; background: #e5e7eb; color: #6b7280; flex-shrink: 0; }
+    .rank-item:nth-child(1) .rank-num { background: #fef3c7; color: #d97706; }
+    .rank-item:nth-child(2) .rank-num { background: #f3f4f6; color: #6b7280; }
+    .rank-item:nth-child(3) .rank-num { background: #fed7aa; color: #ea580c; }
+    .rank-name { flex: 1; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rank-value { font-size: 15px; font-weight: 700; color: #06c755; flex-shrink: 0; }
+    .empty { text-align: center; color: #9ca3af; padding: 32px 0; font-size: 14px; }
+    .loading { text-align: center; color: #6b7280; padding: 32px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>排行榜</h1>
+
+    <div class="tabs" id="periodTabs">
+      <button class="tab active" data-period="week">週榜</button>
+      <button class="tab" data-period="month">月榜</button>
+      <button class="tab" data-period="quarter">季榜</button>
+      <button class="tab" data-period="all">總榜</button>
+    </div>
+
+    <div class="rank-type-toggle">
+      <button class="rank-type-btn active" data-rankby="checkins">打卡天數</button>
+      <button class="rank-type-btn" data-rankby="streak">連續打卡</button>
+    </div>
+
+    <div class="card">
+      <div class="period-label" id="periodLabel"></div>
+      <div id="rankContainer">
+        <div class="loading">載入中...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const LIFF_ID = '<%= liffId %>';
+    let lineUserId = '';
+    let currentPeriod = 'week';
+    let currentRankBy = 'checkins';
+
+    const periodTabs = document.getElementById('periodTabs');
+    const periodLabel = document.getElementById('periodLabel');
+    const rankContainer = document.getElementById('rankContainer');
+
+    const apiFetch = async (url, options = {}) => {
+      const headers = new Headers(options.headers || {});
+      headers.set('x-line-user-id', lineUserId);
+      const res = await fetch(url, { ...options, headers });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: 'Request failed' }));
+        throw new Error(body.error || 'Request failed');
+      }
+      return res.json();
+    };
+
+    const renderRankings = (entries, rankBy) => {
+      if (!entries || entries.length === 0) {
+        rankContainer.innerHTML = '<div class="empty">目前此期間尚無打卡紀錄，快來搶頭香！</div>';
+        return;
+      }
+      const unit = rankBy === 'streak' ? '天' : '天';
+      const html = entries.map((entry, i) => `
+        <div class="rank-item">
+          <div class="rank-num">${i + 1}</div>
+          <div class="rank-name">${entry.displayName}</div>
+          <div class="rank-value">${entry.value}${unit}</div>
+        </div>
+      `).join('');
+      rankContainer.innerHTML = `<ul class="rank-list">${html}</ul>`;
+    };
+
+    const loadLeaderboard = async () => {
+      rankContainer.innerHTML = '<div class="loading">載入中...</div>';
+      try {
+        const data = await apiFetch(`/line/api/liff/leaderboard?period=${currentPeriod}&rankBy=${currentRankBy}`);
+        const label = data.displayRange ? `${data.label}（${data.displayRange}）` : data.label;
+        periodLabel.textContent = label;
+        renderRankings(data.entries, data.rankBy);
+      } catch (error) {
+        rankContainer.innerHTML = `<div class="empty">載入失敗：${error.message}</div>`;
+      }
+    };
+
+    periodTabs.addEventListener('click', (e) => {
+      const tab = e.target.closest('.tab');
+      if (!tab) return;
+      periodTabs.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentPeriod = tab.dataset.period;
+      loadLeaderboard();
+    });
+
+    document.querySelectorAll('.rank-type-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.rank-type-btn').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentRankBy = btn.dataset.rankby;
+        loadLeaderboard();
+      });
+    });
+
+    const init = async () => {
+      await liff.init({ liffId: LIFF_ID });
+      if (!liff.isLoggedIn()) {
+        liff.login({ redirectUri: window.location.href });
+        return;
+      }
+      const profile = await liff.getProfile();
+      lineUserId = profile.userId;
+      loadLeaderboard();
+    };
+
+    init();
+  </script>
+</body>
+</html>

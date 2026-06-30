@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>打卡紀錄</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; background: #f6f7fb; color: #1f2937; }
+    .container { max-width: 640px; margin: 0 auto; padding: 20px; }
+    .card { background: #fff; border-radius: 14px; padding: 20px; box-shadow: 0 8px 24px rgba(0,0,0,.08); margin-bottom: 16px; }
+    h1 { font-size: 24px; margin: 0 0 16px; }
+    .month-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .month-nav button { background: #e5e7eb; border: 0; border-radius: 10px; padding: 8px 14px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .month-nav button:disabled { opacity: 0.4; cursor: default; }
+    .month-nav .month-label { font-size: 16px; font-weight: 700; }
+    .stats-row { display: flex; gap: 12px; margin-bottom: 16px; }
+    .stat-card { flex: 1; background: #f9fafb; border-radius: 10px; padding: 12px; text-align: center; }
+    .stat-card .stat-value { font-size: 22px; font-weight: 700; color: #06c755; }
+    .stat-card .stat-label { font-size: 12px; color: #6b7280; margin-top: 4px; }
+    .history-item { padding: 12px 0; border-bottom: 1px solid #f3f4f6; }
+    .history-item:last-child { border-bottom: 0; }
+    .history-date { font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+    .history-methods { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+    .method-tag { background: #ecfdf5; color: #065f46; border-radius: 6px; padding: 3px 8px; font-size: 12px; font-weight: 500; }
+    .history-note { font-size: 13px; color: #6b7280; line-height: 1.5; }
+    .history-note strong { color: #374151; }
+    .empty { text-align: center; color: #9ca3af; padding: 32px 0; font-size: 14px; }
+    .loading { text-align: center; color: #6b7280; padding: 32px 0; }
+    .weekday { font-size: 12px; color: #9ca3af; font-weight: 400; margin-left: 6px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>打卡紀錄</h1>
+
+    <div class="stats-row" id="statsRow">
+      <div class="stat-card">
+        <div class="stat-value" id="statStreak">-</div>
+        <div class="stat-label">連續打卡</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statLongest">-</div>
+        <div class="stat-label">最高連打</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statTotal">-</div>
+        <div class="stat-label">總打卡</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="month-nav">
+        <button id="prevMonth">&lt;</button>
+        <span class="month-label" id="monthLabel">載入中...</span>
+        <button id="nextMonth">&gt;</button>
+      </div>
+      <div id="historyContainer">
+        <div class="loading">載入中...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const LIFF_ID = '<%= liffId %>';
+    let lineUserId = '';
+    let currentMonth = '';
+
+    const monthLabel = document.getElementById('monthLabel');
+    const historyContainer = document.getElementById('historyContainer');
+    const prevMonthBtn = document.getElementById('prevMonth');
+    const nextMonthBtn = document.getElementById('nextMonth');
+    const statStreak = document.getElementById('statStreak');
+    const statLongest = document.getElementById('statLongest');
+    const statTotal = document.getElementById('statTotal');
+
+    const apiFetch = async (url, options = {}) => {
+      const headers = new Headers(options.headers || {});
+      headers.set('x-line-user-id', lineUserId);
+      const res = await fetch(url, { ...options, headers });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: 'Request failed' }));
+        throw new Error(body.error || 'Request failed');
+      }
+      return res.json();
+    };
+
+    const getWeekday = (dateStr) => {
+      const d = new Date(dateStr);
+      const days = ['日', '一', '二', '三', '四', '五', '六'];
+      return days[d.getDay()];
+    };
+
+    const renderHistory = (data) => {
+      monthLabel.textContent = data.monthLabel;
+      const now = new Date();
+      const nowMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      nextMonthBtn.disabled = data.month >= nowMonth;
+
+      statStreak.textContent = data.stats ? `${data.stats.currentStreak}天` : '-';
+      statLongest.textContent = data.stats ? `${data.stats.longestStreak}天` : '-';
+      statTotal.textContent = data.stats ? `${data.stats.totalCheckins}天` : '-';
+
+      if (!data.entries || data.entries.length === 0) {
+        historyContainer.innerHTML = '<div class="empty">此月份尚無打卡紀錄</div>';
+        return;
+      }
+
+      const html = data.entries.map((entry) => {
+        const weekday = getWeekday(entry.date);
+        const methodsHtml = entry.methodNames && entry.methodNames.length > 0
+          ? `<div class="history-methods">${entry.methodNames.map((m) => `<span class="method-tag">${m}</span>`).join('')}</div>`
+          : '';
+        const notesHtml = [];
+        if (entry.reflectionNote) notesHtml.push(`<div><strong>心得：</strong>${entry.reflectionNote}</div>`);
+        if (entry.bodyFeelingNote) notesHtml.push(`<div><strong>感受：</strong>${entry.bodyFeelingNote}</div>`);
+        const noteHtml = notesHtml.length > 0 ? `<div class="history-note">${notesHtml.join('')}</div>` : '';
+
+        return `
+          <div class="history-item">
+            <div class="history-date">${entry.date}<span class="weekday">（週${weekday}）</span></div>
+            ${methodsHtml}
+            ${noteHtml}
+          </div>
+        `;
+      }).join('');
+
+      historyContainer.innerHTML = html;
+    };
+
+    const loadHistory = async (month) => {
+      historyContainer.innerHTML = '<div class="loading">載入中...</div>';
+      try {
+        const url = month ? `/line/api/liff/history?month=${month}` : '/line/api/liff/history';
+        const data = await apiFetch(url);
+        currentMonth = data.month;
+        renderHistory(data);
+      } catch (error) {
+        historyContainer.innerHTML = `<div class="empty">載入失敗：${error.message}</div>`;
+      }
+    };
+
+    prevMonthBtn.addEventListener('click', () => {
+      if (!currentMonth) return;
+      const [y, m] = currentMonth.split('-').map(Number);
+      const prev = new Date(y, m - 2, 1);
+      const prevMonthStr = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
+      loadHistory(prevMonthStr);
+    });
+
+    nextMonthBtn.addEventListener('click', () => {
+      if (!currentMonth) return;
+      const [y, m] = currentMonth.split('-').map(Number);
+      const next = new Date(y, m, 1);
+      const nextMonthStr = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
+      loadHistory(nextMonthStr);
+    });
+
+    const init = async () => {
+      await liff.init({ liffId: LIFF_ID });
+      if (!liff.isLoggedIn()) {
+        liff.login({ redirectUri: window.location.href });
+        return;
+      }
+      const profile = await liff.getProfile();
+      lineUserId = profile.userId;
+      loadHistory();
+    };
+
+    init();
+  </script>
+</body>
+</html>
