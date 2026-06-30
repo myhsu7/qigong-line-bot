@@ -79,7 +79,7 @@ This will output a public HTTPS URL (e.g., `https://your-node-name.tailscale.net
 
 1. Go to your LINE Developer Console.
 2. Under your Messaging API channel settings, find the **Webhook URL** setting.
-3. Enter your Tailscale URL followed by `/webhook` (e.g., `https://your-node-name.tailscale.net/webhook`).
+3. Enter your Tailscale URL followed by `/line/webhook` (e.g., `https://your-node-name.tailscale.net/line/webhook`).
 4. Click **Verify** to ensure the connection works (make sure the app is running first, see step 6).
 5. Enable "Use webhook".
 
@@ -174,7 +174,7 @@ If you have configured `ADMIN_USER_ID` in your `.env` file, you can type these c
 
 A secure, read-only web dashboard is available to view check-in trends and community leaderboards without sending messages to the LINE group.
 
-1. **Access**: Navigate to `http://<your-server-ip>:3000/admin-dashboard`.
+1. **Access**: Navigate to `http://<your-server-ip>:3000/line/admin-dashboard`.
 2. **Security**: 
    - By default, the dashboard **blocks all public traffic** and only allows connections from Tailscale IPs (`100.*`). You can configure this via the `ADMIN_ALLOWED_IP_PREFIX` environment variable.
    - It requires Basic Auth credentials configured in `.env` (`ADMIN_DASH_USER` and `ADMIN_DASH_PASS`).

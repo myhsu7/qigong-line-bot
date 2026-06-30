@@ -21,7 +21,7 @@ router.get('/', async (req, res) => {
             currentPeriod: period,
             dateRange: `${moment(range.start).format('YYYY-MM-DD')} ~ ${moment(range.end).subtract(1, 'ms').format('YYYY-MM-DD')}`,
             data,
-            path: '/admin-dashboard/method-analysis'
+            path: '/line/admin-dashboard/method-analysis'
         });
     } catch (e) {
         console.error('Error rendering admin method analysis page:', e);

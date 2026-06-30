@@ -27,7 +27,7 @@ const config = {
     channelSecret: process.env.LINE_CHANNEL_SECRET || '',
 };
 
-app.post('/webhook', middleware(config), (req, res) => {
+app.post('/line/webhook', middleware(config), (req, res) => {
     Promise
         .all(req.body.events.map(handleEvent))
         .then((result) => res.json(result))
@@ -39,10 +39,10 @@ app.post('/webhook', middleware(config), (req, res) => {
 
 // Admin Dashboard Routes
 const adminMiddleware = [requireTailscaleInternal, requireAdminBasicAuth, resolveLanguage];
-app.use('/admin-dashboard/method-analysis', adminMiddleware, adminMethodAnalysisPagesRoutes);
-app.use('/admin-dashboard', adminMiddleware, adminPagesRoutes);
-app.use('/api/admin/method-analysis', adminMiddleware, adminMethodAnalysisApiRoutes);
-app.use('/api/admin', adminMiddleware, adminApiRoutes);
+app.use('/line/admin-dashboard/method-analysis', adminMiddleware, adminMethodAnalysisPagesRoutes);
+app.use('/line/admin-dashboard', adminMiddleware, adminPagesRoutes);
+app.use('/line/api/admin/method-analysis', adminMiddleware, adminMethodAnalysisApiRoutes);
+app.use('/line/api/admin', adminMiddleware, adminApiRoutes);
 
 app.get('/', (req, res) => {
     res.send('Qigong LINE Bot is running.');

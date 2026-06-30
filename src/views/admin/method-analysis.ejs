@@ -141,7 +141,7 @@
         document.getElementById('selectedUserName').innerText = displayName;
         
         try {
-            const res = await fetch(`/api/admin/method-analysis/user?userId=${userId}`);
+            const res = await fetch(`/line/api/admin/method-analysis/user?userId=${userId}`);
             const data = await res.json();
             
             document.getElementById('stats30d').innerHTML = renderMethodTable(data['30d']);
@@ -162,7 +162,7 @@
         }
         
         try {
-            const res = await fetch(`/api/admin/method-analysis/search-users?q=${encodeURIComponent(q)}`);
+            const res = await fetch(`/line/api/admin/method-analysis/search-users?q=${encodeURIComponent(q)}`);
             const users = await res.json();
             
             resultsContainer.innerHTML = '';

@@ -69,7 +69,7 @@
 
 ## E. Admin Dashboard
 
-- [ ] `/admin-dashboard` 可正常進入
+- [ ] `/line/admin-dashboard` 可正常進入
 - [ ] 僅 Tailscale 內網可進入
 - [ ] Basic Auth 正常
 - [ ] Overview 圖表正常
@@ -147,7 +147,7 @@
 ## LINE
 
 - [ ] LINE Developer Console verify 成功
-- [ ] `https://ubuntu1.tailbf9b8d.ts.net/webhook` 可正常被代理到 LINE app
+- [ ] `https://ubuntu1.tailbf9b8d.ts.net/line/webhook` 可正常被代理到 LINE app
 
 ## Telegram
 
