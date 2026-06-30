@@ -1,5 +1,6 @@
 import { Request, Router } from 'express';
 import { getPracticeMethods, getTodayLineCheckin, saveTodayLineCheckin, upsertLineUser, evaluateLineLiffBadges } from '../services/lineCheckin';
+import { db } from '../db';
 
 const router = Router();
 
@@ -50,6 +51,25 @@ const resolveLineUser = (req: Request) => {
     return { lineUserId, displayName };
 };
 
+const getUserBadgesSnapshot = async (lineUserId: string) => {
+    const { rows } = await db.query(
+        `SELECT ub.badge_id, ub.earned_year, b.name, b.emoji, b.description
+         FROM user_badges ub
+         JOIN badges b ON b.id = ub.badge_id
+         WHERE ub.line_user_id = $1`,
+        [lineUserId]
+    );
+
+    return rows.map((row) => ({
+        key: `${row.badge_id}:${row.earned_year}`,
+        badgeId: row.badge_id,
+        earnedYear: row.earned_year,
+        name: row.name,
+        emoji: row.emoji || '',
+        description: row.description || ''
+    }));
+};
+
 router.get('/practice-methods', async (req, res) => {
     try {
         const methods = await getPracticeMethods();
@@ -95,11 +115,19 @@ router.post('/checkin', async (req, res) => {
             bodyFeelingLength: bodyFeelingNote.length
         });
 
+        const beforeBadges = await getUserBadgesSnapshot(lineUserId);
+        const beforeBadgeKeys = new Set(beforeBadges.map((badge) => badge.key));
+
         const saved = await saveTodayLineCheckin(lineUserId, methodIds, reflectionNote, bodyFeelingNote);
+        let unlockedBadges: Array<{ badgeId: string; earnedYear: number; name: string; emoji: string; description: string }> = [];
         if (!saved.alreadyCheckedIn) {
             await evaluateLineLiffBadges(lineUserId, saved.selectedMethods);
+            const afterBadges = await getUserBadgesSnapshot(lineUserId);
+            unlockedBadges = afterBadges
+                .filter((badge) => !beforeBadgeKeys.has(badge.key))
+                .map(({ key, ...badge }) => badge);
         }
-        res.json({ ok: true, ...saved });
+        res.json({ ok: true, ...saved, unlockedBadges });
     } catch (error) {
         console.error('[liff-api] failed to save checkin', error);
         res.status(400).json({ error: error instanceof Error ? error.message : 'Failed to save check-in' });

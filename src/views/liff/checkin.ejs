@@ -183,6 +183,15 @@
           summaryLines.push(`⭐ 總打卡天數：${result.stats.totalCheckins} 天`);
         }
 
+        if (result.unlockedBadges && result.unlockedBadges.length > 0) {
+          summaryLines.push('');
+          summaryLines.push('🎉 新解鎖成就：');
+          result.unlockedBadges.forEach((badge) => {
+            const yearText = badge.earnedYear && badge.earnedYear !== 0 ? ` (${badge.earnedYear}年)` : '';
+            summaryLines.push(`${badge.emoji || '🏅'} ${badge.name}${yearText}`);
+          });
+        }
+
         const summaryText = summaryLines.join('\n');
 
         if (liff.isInClient()) {
