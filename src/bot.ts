@@ -13,7 +13,8 @@ const lineConfig = {
 };
 
 const client = new messagingApi.MessagingApiClient(lineConfig);
-const LINE_LIFF_CHECKIN_URL = process.env.LINE_LIFF_CHECKIN_URL || '';
+const LIFF_ID = process.env.LIFF_ID || '';
+const LINE_LIFF_CHECKIN_URL = LIFF_ID ? `https://liff.line.me/${LIFF_ID}` : (process.env.LINE_LIFF_CHECKIN_URL || '');
 
 // Simple in-memory state for user sessions
 const userStates = new Map<string, string>();
