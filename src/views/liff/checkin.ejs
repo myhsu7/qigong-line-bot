@@ -171,6 +171,30 @@
         const streakText = result.stats ? `｜連續 ${result.stats.currentStreak} 天｜總計 ${result.stats.totalCheckins} 天` : '';
         setStatus(submitStatus, `打卡成功：${result.selectedMethods.join('、')}${streakText}`, 'success');
         todayStatus.textContent = '今天的打卡內容已儲存，你可以再次修改後重新送出。';
+
+        const summaryLines = [
+          '✅ 打卡成功',
+          '',
+          `今日功法：${result.selectedMethods.join('、')}`
+        ];
+
+        if (result.stats) {
+          summaryLines.push(`🔥 連續打卡：${result.stats.currentStreak} 天`);
+          summaryLines.push(`⭐ 總打卡天數：${result.stats.totalCheckins} 天`);
+        }
+
+        const summaryText = summaryLines.join('\n');
+
+        if (liff.isInClient()) {
+          try {
+            await liff.sendMessages([{ type: 'text', text: summaryText }]);
+            liff.closeWindow();
+            return;
+          } catch (sendError) {
+            console.error('LIFF sendMessages failed:', sendError);
+            setStatus(submitStatus, '打卡成功，但回傳聊天室失敗，請手動返回 LINE 查看。', 'success');
+          }
+        }
       } catch (error) {
         setStatus(submitStatus, `儲存失敗：${error.message}`, 'error');
       } finally {
