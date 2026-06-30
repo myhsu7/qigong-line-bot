@@ -157,8 +157,12 @@
         const selectedCount = methodIds.length;
         const result = await apiFetch('/line/api/liff/checkin', {
           method: 'POST',
+          headers: {
+            'Content-Type': 'application/json;charset=UTF-8'
+          },
           body: JSON.stringify({
             methodIds: [...methodIds],
+            methodIdsCsv: methodIds.join(','),
             methodCount: selectedCount,
             reflectionNote: reflectionNote.value,
             bodyFeelingNote: bodyFeelingNote.value

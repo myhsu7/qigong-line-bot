@@ -20,6 +20,9 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 // Setup EJS for Admin Dashboard
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));

@@ -24,6 +24,26 @@ const parseMethodIds = (raw: unknown): number[] => {
     return [];
 };
 
+const parseMethodIdsFromRequest = (req: Request): number[] => {
+    const direct = parseMethodIds(req.body?.methodIds);
+    if (direct.length > 0) return direct;
+
+    const csv = req.body?.methodIdsCsv || req.body?.selectedMethodIdsCsv || req.query?.methodIdsCsv;
+    const fromCsv = parseMethodIds(csv);
+    if (fromCsv.length > 0) return fromCsv;
+
+    const bracketKeys = Object.keys(req.body || {})
+        .filter((key) => key.startsWith('methodIds['))
+        .sort();
+    if (bracketKeys.length > 0) {
+        const values = bracketKeys.map((key) => req.body[key]);
+        const fromBracketKeys = parseMethodIds(values);
+        if (fromBracketKeys.length > 0) return fromBracketKeys;
+    }
+
+    return [];
+};
+
 const resolveLineUser = (req: Request) => {
     const lineUserId = (req.header('x-line-user-id') || req.body?.lineUserId || req.query?.lineUserId || '').toString();
     const displayName = (req.header('x-line-display-name') || req.body?.displayName || req.query?.displayName || '').toString();
@@ -59,12 +79,16 @@ router.post('/checkin', async (req, res) => {
         if (!lineUserId) return res.status(400).json({ error: 'Missing lineUserId' });
         await upsertLineUser(lineUserId, displayName || null);
 
-        const methodIds = parseMethodIds(req.body?.methodIds);
+        const methodIds = parseMethodIdsFromRequest(req);
         const reflectionNote = typeof req.body?.reflectionNote === 'string' ? req.body.reflectionNote : '';
         const bodyFeelingNote = typeof req.body?.bodyFeelingNote === 'string' ? req.body.bodyFeelingNote : '';
 
         console.log('[liff-api] save checkin payload', {
             lineUserId,
+            contentType: req.headers['content-type'],
+            rawBodyKeys: Object.keys(req.body || {}),
+            rawMethodIds: req.body?.methodIds,
+            rawMethodIdsCsv: req.body?.methodIdsCsv,
             methodIds,
             methodCount: req.body?.methodCount,
             reflectionLength: reflectionNote.length,
