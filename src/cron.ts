@@ -75,7 +75,7 @@ export const sendDailyReminder = async (modeOverride?: 'resend') => {
 
         if (groupIds.length === 0) {
             console.log('No active groups found. Cannot send reminder.');
-            return;
+            return { successCount: 0, totalCount: 0, groupIds: [] as string[] };
         }
 
         // Generate Solar Term (節氣) Info
@@ -134,8 +134,10 @@ export const sendDailyReminder = async (modeOverride?: 'resend') => {
         }
 
         console.log(`Daily reminder sent successfully to ${successCount}/${groupIds.length} groups`);
+        return { successCount, totalCount: groupIds.length, groupIds };
     } catch (error) {
         console.error('Error sending daily reminder:', error);
+        return { successCount: 0, totalCount: 0, groupIds: [] as string[] };
     }
 };
 

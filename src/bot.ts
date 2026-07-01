@@ -37,6 +37,13 @@ const LINE_LIFF_HISTORY_URL = buildLineLiffEntryUrl('history');
 // Simple in-memory state for user sessions
 const userStates = new Map<string, string>();
 
+const ensureGroupRegistered = async (event: webhook.Event) => {
+    if (!event.source || event.source.type !== 'group') return;
+    const groupId = (event.source as any).groupId;
+    if (!groupId) return;
+    await db.query("INSERT INTO active_groups (group_id) VALUES ($1) ON CONFLICT DO NOTHING", [groupId]);
+};
+
 export const handleEvent = async (event: webhook.Event): Promise<any> => {
     // 1. Capture Group ID if the bot is invited to a group
     if (event.type === 'join' && event.source && event.source.type === 'group') {
@@ -48,6 +55,10 @@ export const handleEvent = async (event: webhook.Event): Promise<any> => {
                 messages: [{ type: 'text', text: '大家好！我已經準備好為大家記錄每天的氣功練習了。請記得加我為好友，在私訊中進行每日打卡喔！' }]
             });
         }
+    }
+
+    if (event.source && event.source.type === 'group') {
+        await ensureGroupRegistered(event);
     }
 
     // Handle bot being removed from a group
@@ -92,10 +103,21 @@ export const handleEvent = async (event: webhook.Event): Promise<any> => {
 
         if (text === '!admin resend-reminder' && replyToken) {
             console.log(`[Admin Command] Resending daily reminder by requested user: ${userId}`);
-            await sendManualResendReminder();
+            const result = await sendManualResendReminder();
             return client.replyMessage({
                 replyToken,
-                messages: [{ type: 'text', text: '系統訊息：已成功手動觸發補發提醒廣播！' }]
+                messages: [{ type: 'text', text: `系統訊息：已成功手動觸發補發提醒廣播！送出 ${result.successCount}/${result.totalCount} 個群組。` }]
+            });
+        }
+
+        if (text === '!admin list_groups' && replyToken) {
+            const { rows } = await db.query("SELECT group_id, joined_at FROM active_groups ORDER BY joined_at DESC");
+            const msg = rows.length === 0
+                ? '系統訊息：目前沒有已登記群組。'
+                : `系統訊息：目前共有 ${rows.length} 個群組\n` + rows.map((row, index) => `${index + 1}. ${row.group_id} (${row.joined_at})`).join('\n');
+            return client.replyMessage({
+                replyToken,
+                messages: [{ type: 'text', text: msg }]
             });
         }
 
