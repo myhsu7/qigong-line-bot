@@ -121,6 +121,38 @@ export const handleEvent = async (event: webhook.Event): Promise<any> => {
             });
         }
 
+        if (text === '!admin quota' && replyToken) {
+            try {
+                const [quota, consumption] = await Promise.all([
+                    client.getMessageQuota(),
+                    client.getMessageQuotaConsumption()
+                ]);
+
+                const quotaType = quota.type === 'limited' ? 'limited' : quota.type;
+                const quotaValue = typeof quota.value === 'number' ? quota.value : null;
+                const used = consumption.totalUsage || 0;
+                const remaining = quotaValue === null ? 'unlimited' : Math.max(quotaValue - used, 0).toString();
+                const msg = [
+                    '系統訊息：本月 Messaging API 配額',
+                    `type: ${quotaType}`,
+                    `quota: ${quotaValue === null ? 'unlimited' : quotaValue}`,
+                    `used: ${used}`,
+                    `remaining: ${remaining}`
+                ].join('\n');
+
+                return client.replyMessage({
+                    replyToken,
+                    messages: [{ type: 'text', text: msg }]
+                });
+            } catch (error) {
+                console.error('[Admin Command] Failed to fetch quota:', error);
+                return client.replyMessage({
+                    replyToken,
+                    messages: [{ type: 'text', text: '系統訊息：查詢 quota 失敗，請稍後再試。' }]
+                });
+            }
+        }
+
         if (text.startsWith('!admin broadcast ') && replyToken) {
             const broadcastMsg = text.replace('!admin broadcast ', '').trim();
             console.log(`[Admin Command] Sending ad-hoc broadcast length: ${broadcastMsg.length}`);
