@@ -57,6 +57,7 @@ LINE_CHANNEL_ACCESS_TOKEN=your_channel_access_token
 LINE_CHANNEL_SECRET=your_channel_secret
 DATABASE_URL=postgres://qigong_user:qigong_password@localhost:5432/qigong_bot
 ADMIN_USER_ID=your_line_user_id
+LINE_BOT_SHORTCUT_URL=https://line.me/R/oaMessage/%40your_oa_id/?%E2%9C%85%20Check-In
 LIFF_ID=your_liff_id
 LINE_LIFF_CHECKIN_URL=https://liff.line.me/your_liff_id
 ADMIN_DASH_USER=admin
@@ -65,8 +66,9 @@ ADMIN_ALLOWED_IP_PREFIX=100.
 ```
 *(If you are using the provided Docker setup, the default DB credentials will work immediately).*
 *(For `ADMIN_USER_ID`, this is your personal LINE user ID, needed to execute `!admin` commands).*
+*(For `LINE_BOT_SHORTCUT_URL`, this is the deep link used in group reminders to open the 1-on-1 chat with the bot and prefill `✅ Check-In`, so LIFF check-in runs in DM context instead of posting summaries back to the group).*
 *(For `LIFF_ID`, this is the LINE LIFF app id used by the structured check-in page).*
-*(For `LINE_LIFF_CHECKIN_URL`, this is the URL used by both the bot and daily reminders when opening check-in; prefer the official LIFF launch URL: `https://liff.line.me/{LIFF_ID}`. The LIFF app endpoint in LINE Developers should still point to `/line/liff/checkin`).*
+*(For `LINE_LIFF_CHECKIN_URL`, this is the URL used by the bot and Rich Menu when opening check-in in 1-on-1 chat; prefer the official LIFF launch URL: `https://liff.line.me/{LIFF_ID}`. The LIFF app endpoint in LINE Developers should still point to `/line/liff/checkin`).*
 
 ⚠️ **Important:** `ADMIN_USER_ID` is **NOT** your regular LINE ID (the one you give friends to add you). It is your Developer User ID, which always starts with the letter `U` (e.g., `U1234567890abcdef...`). You can find this ID in the [LINE Developer Console](https://developers.line.biz/console/) by navigating to your Provider -> your Messaging API Channel -> clicking the **Basic settings** tab and scrolling all the way to the bottom to "**Your user ID**".
 

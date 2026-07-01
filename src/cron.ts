@@ -7,8 +7,7 @@ import { getDailyWisdom } from './content/wisdom';
 import { getSolarTermGuide } from './content/solarTerms';
 
 const TIMEZONE = 'Asia/Taipei';
-const LIFF_ID = process.env.LIFF_ID || '';
-const CHECKIN_SHORTCUT_URL = LIFF_ID ? `https://liff.line.me/${LIFF_ID}` : (process.env.LINE_LIFF_CHECKIN_URL || '');
+const CHECKIN_SHORTCUT_URL = process.env.LINE_BOT_SHORTCUT_URL || '';
 
 const lineConfig = {
     channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN || '',
@@ -117,7 +116,7 @@ export const sendDailyReminder = async (modeOverride?: 'resend') => {
         );
 
         if (!CHECKIN_SHORTCUT_URL) {
-            console.warn('[Warning] LIFF check-in URL is not set. Reminder check-in link will not be appended.');
+            console.warn('[Warning] LINE_BOT_SHORTCUT_URL is not set. Reminder check-in link will not be appended.');
         }
 
         // Send via pushMessage to each group individually (multicast does not support group IDs)
