@@ -7,20 +7,20 @@ const router = Router();
 
 const parseMethodIds = (raw: unknown): number[] => {
     if (Array.isArray(raw)) {
-        return raw.map((id) => Number(id)).filter((id) => Number.isFinite(id) && id > 0);
+        return Array.from(new Set(raw.map((id) => Number(id)).filter((id) => Number.isFinite(id) && id > 0)));
     }
 
     if (typeof raw === 'string') {
-        return raw
+        return Array.from(new Set(raw
             .split(',')
             .map((id) => Number(id.trim()))
-            .filter((id) => Number.isFinite(id) && id > 0);
+            .filter((id) => Number.isFinite(id) && id > 0)));
     }
 
     if (raw && typeof raw === 'object') {
-        return Object.values(raw as Record<string, unknown>)
+        return Array.from(new Set(Object.values(raw as Record<string, unknown>)
             .map((id) => Number(id))
-            .filter((id) => Number.isFinite(id) && id > 0);
+            .filter((id) => Number.isFinite(id) && id > 0)));
     }
 
     return [];

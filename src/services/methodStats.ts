@@ -17,6 +17,30 @@ export const methodDictionary = [
     { name: '六音理臟法', aliases: ['六音理臟法'] }
 ];
 
+const leafMethodCatalog = [
+    '大雁初',
+    '大雁高',
+    '鶴戲',
+    '猿戲',
+    '虎戲',
+    '熊戲',
+    '鹿戲',
+    '回春初',
+    '回春中',
+    '八卦功',
+    '乾坤功',
+    '鳳翔與龜縮',
+    '晨功',
+    '夜功',
+    '神奇晃海功',
+    '蓮花養心法',
+    '和氣舒壓法',
+    '三窩功',
+    '六音理臟法',
+    '周天靜功',
+    '七星心法'
+];
+
 export type MethodPeriod = '30d' | '90d' | 'month' | 'quarter' | 'year';
 
 interface PeriodRange {
@@ -230,7 +254,7 @@ export const buildUserMethodReview = (analysis30d: any, analysis90d: any): strin
     }
 
     // Recommendation (randomly pick one they haven't practiced much)
-    const allDictNames = methodDictionary.map(m => m.name);
+    const allDictNames = leafMethodCatalog;
     const practicedNames = analysis30d.methods.map((m: any) => m.methodName);
     const unpracticed = allDictNames.filter(name => !practicedNames.includes(name));
     

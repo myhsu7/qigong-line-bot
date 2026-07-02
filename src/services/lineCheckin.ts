@@ -10,6 +10,19 @@ export interface LinePracticeMethod {
     nameZh: string;
     nameEn: string | null;
     estimatedMinutes: number | null;
+    parentId: number | null;
+    methodType: 'group' | 'leaf';
+    children: LinePracticeMethod[];
+}
+
+interface PracticeMethodRow {
+    id: number;
+    code: string;
+    name_zh: string;
+    name_en: string | null;
+    estimated_minutes: number | null;
+    parent_id: number | null;
+    method_type: string | null;
 }
 
 export interface TodayLineCheckinResponse {
@@ -29,21 +42,84 @@ export const upsertLineUser = async (lineUserId: string, displayName?: string | 
     );
 };
 
-export const getPracticeMethods = async (): Promise<LinePracticeMethod[]> => {
+const getPracticeMethodRows = async (): Promise<PracticeMethodRow[]> => {
     const { rows } = await db.query(
-        `SELECT id, code, name_zh, name_en, estimated_minutes
+        `SELECT id, code, name_zh, name_en, estimated_minutes, parent_id, method_type
          FROM practice_methods
          WHERE is_active = TRUE
          ORDER BY sort_order ASC, id ASC`
     );
 
-    return rows.map((row) => ({
-        id: row.id,
-        code: row.code,
-        nameZh: row.name_zh,
-        nameEn: row.name_en,
-        estimatedMinutes: row.estimated_minutes
-    }));
+    return rows;
+};
+
+const buildPracticeMethodTree = (rows: PracticeMethodRow[]): LinePracticeMethod[] => {
+    const methodMap = new Map<number, LinePracticeMethod>();
+
+    rows.forEach((row) => {
+        methodMap.set(row.id, {
+            id: row.id,
+            code: row.code,
+            nameZh: row.name_zh,
+            nameEn: row.name_en,
+            estimatedMinutes: row.estimated_minutes,
+            parentId: row.parent_id,
+            methodType: row.method_type === 'group' ? 'group' : 'leaf',
+            children: []
+        });
+    });
+
+    const roots: LinePracticeMethod[] = [];
+    rows.forEach((row) => {
+        const method = methodMap.get(row.id);
+        if (!method) return;
+
+        if (row.parent_id) {
+            const parent = methodMap.get(row.parent_id);
+            if (parent) {
+                parent.children.push(method);
+                return;
+            }
+        }
+
+        roots.push(method);
+    });
+
+    return roots;
+};
+
+const normalizeSelectedLeafIds = (selectedIds: number[], rows: PracticeMethodRow[]) => {
+    const methodMap = new Map<number, PracticeMethodRow>(rows.map((row) => [row.id, row]));
+    const childrenByParentId = new Map<number, number[]>();
+
+    rows.forEach((row) => {
+        if (!row.parent_id) return;
+        const children = childrenByParentId.get(row.parent_id) || [];
+        children.push(row.id);
+        childrenByParentId.set(row.parent_id, children);
+    });
+
+    const normalized = new Set<number>();
+    selectedIds.forEach((id) => {
+        const method = methodMap.get(id);
+        if (!method) return;
+
+        if (method.method_type === 'group') {
+            (childrenByParentId.get(id) || []).forEach((childId) => normalized.add(childId));
+            return;
+        }
+
+        normalized.add(id);
+    });
+
+    return rows
+        .filter((row) => normalized.has(row.id))
+        .map((row) => row.id);
+};
+
+export const getPracticeMethods = async (): Promise<LinePracticeMethod[]> => {
+    const rows = await getPracticeMethodRows();
+    return buildPracticeMethodTree(rows);
 };
 
 export const getTodayLineCheckin = async (lineUserId: string): Promise<TodayLineCheckinResponse> => {
@@ -75,11 +151,17 @@ export const getTodayLineCheckin = async (lineUserId: string): Promise<TodayLine
         [checkin.id]
     );
 
+    const methodRows = await getPracticeMethodRows();
+    const normalizedSelectedIds = normalizeSelectedLeafIds(
+        selected.rows.map((r) => r.practice_method_id),
+        methodRows
+    );
+
     return {
         date: today,
         alreadyCheckedIn: true,
         checkinLogId: checkin.id,
-        selectedMethodIds: selected.rows.map((r) => r.practice_method_id),
+        selectedMethodIds: normalizedSelectedIds,
         reflectionNote: checkin.reflection_note || '',
         bodyFeelingNote: checkin.body_feeling_note || ''
     };
@@ -99,7 +181,9 @@ export const saveTodayLineCheckin = async (
     reflectionNote: string,
     bodyFeelingNote: string
 ) => {
-    if (methodIds.length === 0) {
+    const uniqueMethodIds = Array.from(new Set(methodIds.filter((id) => Number.isFinite(id) && id > 0)));
+
+    if (uniqueMethodIds.length === 0) {
         throw new Error('At least one practice method must be selected');
     }
 
@@ -112,15 +196,19 @@ export const saveTodayLineCheckin = async (
         await client.query('BEGIN');
 
         const methodRows = await client.query(
-            `SELECT id, name_zh
+            `SELECT id, name_zh, method_type
              FROM practice_methods
              WHERE id = ANY($1::int[]) AND is_active = TRUE
              ORDER BY sort_order ASC, id ASC`,
-            [methodIds]
+            [uniqueMethodIds]
         );
 
-        if (methodRows.rows.length !== methodIds.length) {
+        if (methodRows.rows.length !== uniqueMethodIds.length) {
             throw new Error('One or more selected practice methods are invalid');
+        }
+
+        if (methodRows.rows.some((row) => row.method_type !== 'leaf')) {
+            throw new Error('Only leaf practice methods can be selected');
         }
 
         const methodNames = methodRows.rows.map((row) => row.name_zh);
@@ -202,7 +290,7 @@ export const saveTodayLineCheckin = async (
             };
         }
 
-        for (const methodId of methodIds) {
+        for (const methodId of uniqueMethodIds) {
             await client.query(
                 `INSERT INTO checkin_method_selections (checkin_log_id, practice_method_id)
                  VALUES ($1, $2)

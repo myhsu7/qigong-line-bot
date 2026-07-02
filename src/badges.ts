@@ -133,8 +133,20 @@ export const evaluateBadges = async (userId: string, text: string) => {
         if (daysSinceWinter === 27) {
             if (!(await hasEarnedBadge(userId, 'seasonal_winter_27', currentYear))) {
                 const { rows } = await db.query(
-                    'SELECT COUNT(DISTINCT DATE(created_at AT TIME ZONE $1)) as count FROM checkin_logs WHERE line_user_id = $2 AND created_at >= $3 AND note LIKE $4',
-                    [TIMEZONE, userId, winterSolstice.toDate(), '%龜壽功%']
+                    `WITH guishou_days AS (
+                        SELECT DISTINCT COALESCE(l.checkin_date, DATE(l.created_at AT TIME ZONE $1)) AS local_date
+                        FROM checkin_logs l
+                        LEFT JOIN checkin_method_selections s ON s.checkin_log_id = l.id
+                        LEFT JOIN practice_methods pm ON pm.id = s.practice_method_id
+                        WHERE l.line_user_id = $2
+                          AND l.created_at >= $3
+                          AND (
+                              pm.code IN ('guishou', 'guishou_bagua', 'guishou_qiankun', 'guishou_fengxiang_guishuo')
+                              OR COALESCE(l.note, '') LIKE ANY ($4::text[])
+                          )
+                    )
+                    SELECT COUNT(*) AS count FROM guishou_days`,
+                    [TIMEZONE, userId, winterSolstice.toDate(), ['%龜壽功%', '%八卦功%', '%乾坤功%', '%鳳翔與龜縮%']]
                 );
                 if (parseInt(rows[0].count) >= 27) {
                     await awardBadge(userId, 'seasonal_winter_27', currentYear);
