@@ -50,11 +50,14 @@
   <script>
     const LIFF_ID = '<%= liffId %>';
     let lineUserId = '';
+    let displayName = '';
     const escapeHtml = (value) => String(value || '')
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
     const apiFetch = async (url) => {
-      const res = await fetch(url, { headers: { 'x-line-user-id': lineUserId } });
+      const separator = url.includes('?') ? '&' : '?';
+      const finalUrl = `${url}${separator}displayName=${encodeURIComponent(displayName)}`;
+      const res = await fetch(finalUrl, { headers: { 'x-line-user-id': lineUserId } });
       if (!res.ok) {
         const body = await res.json().catch(() => ({ error: 'Request failed' }));
         throw new Error(body.error || 'Request failed');
@@ -70,6 +73,7 @@
       }
       const profile = await liff.getProfile();
       lineUserId = profile.userId;
+      displayName = profile.displayName || '';
       try {
         const data = await apiFetch('/line/api/liff/achievements');
         const stats = data.stats || {};

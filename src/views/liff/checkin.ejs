@@ -83,7 +83,11 @@
       if (!headers.has('Content-Type') && options.method && options.method !== 'GET') {
         headers.set('Content-Type', 'application/json');
       }
-      const res = await fetch(url, { ...options, headers });
+      
+      const separator = url.includes('?') ? '&' : '?';
+      const finalUrl = `${url}${separator}displayName=${encodeURIComponent(displayName)}`;
+      
+      const res = await fetch(finalUrl, { ...options, headers });
       if (!res.ok) {
         const body = await res.json().catch(() => ({ error: 'Request failed' }));
         throw new Error(body.error || 'Request failed');
