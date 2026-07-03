@@ -2,8 +2,18 @@ import { db } from './db';
 import { messagingApi } from '@line/bot-sdk';
 import moment from 'moment-timezone';
 import { Solar, Lunar } from 'lunar-javascript';
+import { getLeafCodesByParentCode } from './services/lineCheckin';
 
 const TIMEZONE = 'Asia/Taipei';
+
+const COMBO_BADGES = [
+    { badgeId: 'combo_dayan', parentCode: 'dayan' },
+    { badgeId: 'combo_wuqinxi', parentCode: 'wuqinxi' },
+    { badgeId: 'combo_huichun', parentCode: 'huichun' },
+    { badgeId: 'combo_guishou', parentCode: 'guishou' },
+    { badgeId: 'combo_zhengyang', parentCode: 'zhengyang' },
+    { badgeId: 'combo_jinggong', parentCode: 'jinggong' }
+] as const;
 
 const lineConfig = {
     channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN || '',
@@ -47,7 +57,7 @@ const awardBadge = async (userId: string, badgeId: string, year: number) => {
 };
 
 // The Evaluation Engine
-export const evaluateBadges = async (userId: string, text: string) => {
+export const evaluateBadges = async (userId: string, text: string, selectedMethodCodes: string[] = []) => {
     const now = moment().tz(TIMEZONE);
     const currentYear = now.year();
 
@@ -151,6 +161,22 @@ export const evaluateBadges = async (userId: string, text: string) => {
                 if (parseInt(rows[0].count) >= 27) {
                     await awardBadge(userId, 'seasonal_winter_27', currentYear);
                 }
+            }
+        }
+    }
+
+    // --- COMBO BADGES ---
+    if (selectedMethodCodes.length > 0) {
+        const selectedCodeSet = new Set(selectedMethodCodes);
+        const leafCodesByParentCode = await getLeafCodesByParentCode();
+
+        for (const combo of COMBO_BADGES) {
+            const requiredLeafCodes = leafCodesByParentCode.get(combo.parentCode) || [];
+            if (requiredLeafCodes.length === 0) continue;
+            if (!requiredLeafCodes.every((code) => selectedCodeSet.has(code))) continue;
+
+            if (!(await hasEarnedBadge(userId, combo.badgeId, currentYear))) {
+                await awardBadge(userId, combo.badgeId, currentYear);
             }
         }
     }

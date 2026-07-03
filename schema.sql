@@ -73,7 +73,13 @@ INSERT INTO badges (id, name, emoji, description, category) VALUES
     ('time_morning', '晨露', '🌅', '連續 5 天在早上 5:00 - 7:00 打卡', 'TIME_BASED'),
     ('time_night', '夜靜', '🦉', '連續 5 天在晚上 9:00 - 11:00 打卡', 'TIME_BASED'),
     ('seasonal_summer_27', '夏練三伏', '☀️', '夏至過後，連續打卡 27 天', 'SEASONAL'),
-    ('seasonal_winter_27', '冬練三九', '❄️', '冬至過後，連續打卡 27 天，且練習龜壽功', 'SEASONAL')
+    ('seasonal_winter_27', '冬練三九', '❄️', '冬至過後，連續打卡 27 天，且練習龜壽功', 'SEASONAL'),
+    ('combo_dayan', '大雁雙修', '🦢', '同日練習大雁初與大雁高，可於每年重新解鎖', 'COMBO'),
+    ('combo_wuqinxi', '五禽圓滿', '🐅', '同日完成五禽戲全套五式，可於每年重新解鎖', 'COMBO'),
+    ('combo_huichun', '回春雙式', '🌱', '同日練習回春初與回春中，可於每年重新解鎖', 'COMBO'),
+    ('combo_guishou', '龜壽全式', '🐢', '同日完成龜壽功全套三式，可於每年重新解鎖', 'COMBO'),
+    ('combo_zhengyang', '正陽雙照', '☀️', '同日練習晨功與夜功，可於每年重新解鎖', 'COMBO'),
+    ('combo_jinggong', '靜功雙法', '🧘', '同日練習周天靜功與七星心法，可於每年重新解鎖', 'COMBO')
 ON CONFLICT (id) DO UPDATE SET 
     name = EXCLUDED.name,
     emoji = EXCLUDED.emoji,

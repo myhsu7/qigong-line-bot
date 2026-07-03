@@ -122,6 +122,22 @@ export const getPracticeMethods = async (): Promise<LinePracticeMethod[]> => {
     return buildPracticeMethodTree(rows);
 };
 
+export const getLeafCodesByParentCode = async (): Promise<Map<string, string[]>> => {
+    const rows = await getPracticeMethodRows();
+    const rowById = new Map<number, PracticeMethodRow>(rows.map((row) => [row.id, row]));
+    const leafCodesByParentCode = new Map<string, string[]>();
+
+    rows.forEach((row) => {
+        if (row.method_type !== 'leaf' || !row.parent_id) return;
+        const parent = rowById.get(row.parent_id);
+        if (!parent) return;
+
+        leafCodesByParentCode.set(parent.code, [...(leafCodesByParentCode.get(parent.code) || []), row.code]);
+    });
+
+    return leafCodesByParentCode;
+};
+
 export const getTodayLineCheckin = async (lineUserId: string): Promise<TodayLineCheckinResponse> => {
     const today = moment().tz(TIMEZONE).format('YYYY-MM-DD');
     const { rows } = await db.query(
@@ -196,7 +212,7 @@ export const saveTodayLineCheckin = async (
         await client.query('BEGIN');
 
         const methodRows = await client.query(
-            `SELECT id, name_zh, method_type
+            `SELECT id, code, name_zh, method_type
              FROM practice_methods
              WHERE id = ANY($1::int[]) AND is_active = TRUE
              ORDER BY sort_order ASC, id ASC`,
@@ -212,6 +228,7 @@ export const saveTodayLineCheckin = async (
         }
 
         const methodNames = methodRows.rows.map((row) => row.name_zh);
+        const methodCodes = methodRows.rows.map((row) => row.code);
         const note = buildLegacyNote(methodNames, reflectionNote, bodyFeelingNote);
 
         const existing = await client.query(
@@ -306,6 +323,7 @@ export const saveTodayLineCheckin = async (
             checkinLogId,
             alreadyCheckedIn,
             selectedMethods: methodNames,
+            selectedMethodCodes: methodCodes,
             stats
         };
     } catch (error) {
@@ -316,7 +334,7 @@ export const saveTodayLineCheckin = async (
     }
 };
 
-export const evaluateLineLiffBadges = async (lineUserId: string, selectedMethods: string[]) => {
+export const evaluateLineLiffBadges = async (lineUserId: string, selectedMethods: string[], selectedMethodCodes: string[] = []) => {
     const note = buildLegacyNote(selectedMethods, '', '');
-    await evaluateBadges(lineUserId, note);
+    await evaluateBadges(lineUserId, note, selectedMethodCodes);
 };

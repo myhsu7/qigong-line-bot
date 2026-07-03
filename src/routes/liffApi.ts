@@ -335,7 +335,7 @@ router.get('/achievements', async (req, res) => {
         await upsertLineUser(lineUserId, displayName || null);
 
         const [statsRes, badgesRes] = await Promise.all([
-            db.query('SELECT current_streak, longest_streak, total_checkins FROM users WHERE line_user_id = $1', [lineUserId]),
+            db.query('SELECT current_streak, longest_streak, total_checkins, last_checkin_date FROM users WHERE line_user_id = $1', [lineUserId]),
             db.query(
                 `SELECT b.emoji, b.name, b.description, u.earned_year
                  FROM user_badges u
@@ -366,7 +366,8 @@ router.get('/achievements', async (req, res) => {
             stats: {
                 currentStreak: Number(statsRow.current_streak || 0),
                 longestStreak: Number(statsRow.longest_streak || 0),
-                totalCheckins
+                totalCheckins,
+                lastCheckinDate: statsRow.last_checkin_date ? moment(statsRow.last_checkin_date).tz(TIMEZONE).format('YYYY-MM-DD') : null
             },
             badges: badgesRes.rows,
             levelTitle,
@@ -406,7 +407,7 @@ router.post('/checkin', async (req, res) => {
         const saved = await saveTodayLineCheckin(lineUserId, methodIds, reflectionNote, bodyFeelingNote);
         let unlockedBadges: Array<{ badgeId: string; earnedYear: number; name: string; emoji: string; description: string }> = [];
         if (!saved.alreadyCheckedIn) {
-            await evaluateLineLiffBadges(lineUserId, saved.selectedMethods);
+            await evaluateLineLiffBadges(lineUserId, saved.selectedMethods, saved.selectedMethodCodes || []);
             const afterBadges = await getUserBadgesSnapshot(lineUserId);
             unlockedBadges = afterBadges
                 .filter((badge) => !beforeBadgeKeys.has(badge.key))
