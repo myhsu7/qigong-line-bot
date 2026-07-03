@@ -103,16 +103,105 @@ export const getOverviewStats = async (period: AdminPeriod) => {
     };
 };
 
+export interface TodayCheckinUser {
+    lineUserId: string;
+    displayName: string;
+}
+
+export interface TodayCheckinPage {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    users: TodayCheckinUser[];
+}
+
+const getTodayDateStr = () => moment().tz(TIMEZONE).format('YYYY-MM-DD');
+
+export const getTodayCheckedInUsers = async (page = 1, limit = 20): Promise<TodayCheckinPage> => {
+    const today = getTodayDateStr();
+    const offset = (page - 1) * limit;
+
+    const countRes = await db.query(
+        `SELECT COUNT(DISTINCT line_user_id) AS total
+         FROM checkin_logs
+         WHERE checkin_date = $1`,
+        [today]
+    );
+    const total = parseInt(countRes.rows[0]?.total || '0', 10);
+
+    const { rows } = await db.query(
+        `SELECT u.line_user_id, u.display_name
+         FROM users u
+         JOIN checkin_logs c ON c.line_user_id = u.line_user_id
+         WHERE c.checkin_date = $1
+         GROUP BY u.line_user_id, u.display_name
+         ORDER BY MAX(c.created_at) DESC
+         LIMIT $2 OFFSET $3`,
+        [today, limit, offset]
+    );
+
+    return {
+        total,
+        page,
+        limit,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+        users: rows.map((row) => ({
+            lineUserId: row.line_user_id,
+            displayName: row.display_name || 'Unknown'
+        }))
+    };
+};
+
+export const getTodayPendingUsers = async (page = 1, limit = 20): Promise<TodayCheckinPage> => {
+    const today = getTodayDateStr();
+    const offset = (page - 1) * limit;
+
+    const countRes = await db.query(
+        `SELECT COUNT(*) AS total
+         FROM users u
+         WHERE NOT EXISTS (
+             SELECT 1 FROM checkin_logs c
+             WHERE c.line_user_id = u.line_user_id AND c.checkin_date = $1
+         )`,
+        [today]
+    );
+    const total = parseInt(countRes.rows[0]?.total || '0', 10);
+
+    const { rows } = await db.query(
+        `SELECT u.line_user_id, u.display_name
+         FROM users u
+         WHERE NOT EXISTS (
+             SELECT 1 FROM checkin_logs c
+             WHERE c.line_user_id = u.line_user_id AND c.checkin_date = $1
+         )
+         ORDER BY u.display_name ASC, u.line_user_id ASC
+         LIMIT $2 OFFSET $3`,
+        [today, limit, offset]
+    );
+
+    return {
+        total,
+        page,
+        limit,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+        users: rows.map((row) => ({
+            lineUserId: row.line_user_id,
+            displayName: row.display_name || 'Unknown'
+        }))
+    };
+};
+
 export const getLeaderboardStats = async (period: AdminPeriod) => {
     const { start, end } = getAdminPeriodRange(period);
 
     // Reuse the exact queries from the public leaderboard but optimized for admin
     const totalsQuery = `
-        SELECT u.display_name, COUNT(DISTINCT DATE(c.created_at AT TIME ZONE $1)) AS total_days
+        SELECT u.line_user_id, u.display_name, COUNT(DISTINCT DATE(c.created_at AT TIME ZONE $1)) AS total_days
         FROM checkin_logs c
         JOIN users u ON u.line_user_id = c.line_user_id
         WHERE c.created_at >= $2 AND c.created_at < $3
-        GROUP BY u.display_name
+        GROUP BY u.line_user_id, u.display_name
         ORDER BY total_days DESC, u.display_name ASC
         LIMIT 10;
     `;
@@ -131,7 +220,7 @@ export const getLeaderboardStats = async (period: AdminPeriod) => {
     // Compute max streaks using same logic
     let streaksData: any[] = [];
     if (streaksRes.rows.length > 0) {
-        const userStreaks = new Map<string, { displayName: string, maxStreak: number }>();
+        const userStreaks = new Map<string, { lineUserId: string, displayName: string, maxStreak: number }>();
         let currentUserId = '';
         let currentDisplayName = '';
         let currentStreak = 0;
@@ -143,7 +232,7 @@ export const getLeaderboardStats = async (period: AdminPeriod) => {
         for (const row of processingRows) {
             if (row.line_user_id !== currentUserId) {
                 if (currentUserId !== '') {
-                    userStreaks.set(currentUserId, { displayName: currentDisplayName, maxStreak });
+                    userStreaks.set(currentUserId, { lineUserId: currentUserId, displayName: currentDisplayName, maxStreak });
                 }
                 currentUserId = row.line_user_id;
                 currentDisplayName = row.display_name;

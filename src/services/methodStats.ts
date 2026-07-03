@@ -43,6 +43,14 @@ const leafMethodCatalog = [
 
 export type MethodPeriod = '30d' | '90d' | 'month' | 'quarter' | 'year';
 
+export interface UserPracticeJournalEntry {
+    id: number;
+    date: string;
+    methodNames: string[];
+    reflectionNote: string;
+    bodyFeelingNote: string;
+}
+
 interface PeriodRange {
     start: Date;
     end: Date;
@@ -226,6 +234,39 @@ export const getUserMethodAnalysis = async (userId: string, period: MethodPeriod
         methods,
         top3Methods: methods.slice(0, 3)
     };
+};
+
+export const getUserPracticeJournal = async (userId: string, limit = 12): Promise<UserPracticeJournalEntry[]> => {
+    const { rows } = await db.query(
+        `SELECT c.id,
+                c.checkin_date,
+                c.reflection_note,
+                c.body_feeling_note,
+                ARRAY_AGG(pm.name_zh ORDER BY pm.sort_order ASC, pm.id ASC)
+                    FILTER (WHERE pm.id IS NOT NULL) AS method_names
+         FROM checkin_logs c
+         LEFT JOIN checkin_method_selections s ON s.checkin_log_id = c.id
+         LEFT JOIN practice_methods pm ON pm.id = s.practice_method_id
+         WHERE c.line_user_id = $1
+           AND (
+               COALESCE(BTRIM(c.reflection_note), '') <> ''
+               OR COALESCE(BTRIM(c.body_feeling_note), '') <> ''
+           )
+         GROUP BY c.id
+         ORDER BY c.checkin_date DESC
+         LIMIT $2`,
+        [userId, limit]
+    );
+
+    return rows.map((row) => ({
+        id: Number(row.id),
+        date: row.checkin_date,
+        methodNames: Array.isArray(row.method_names)
+            ? row.method_names.filter((name: string | null) => typeof name === 'string')
+            : [],
+        reflectionNote: row.reflection_note || '',
+        bodyFeelingNote: row.body_feeling_note || ''
+    }));
 };
 
 export const buildUserMethodReview = (analysis30d: any, analysis90d: any): string => {

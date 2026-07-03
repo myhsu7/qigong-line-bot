@@ -1,5 +1,5 @@
-import { Router } from 'express';
-import { getOverviewStats, getLeaderboardStats, AdminPeriod, getAdminPeriodRange } from '../services/adminStats';
+import { Request, Router } from 'express';
+import { getOverviewStats, getLeaderboardStats, AdminPeriod, getAdminPeriodRange, getTodayCheckedInUsers, getTodayPendingUsers } from '../services/adminStats';
 import moment from 'moment-timezone';
 
 const router = Router();
@@ -51,6 +51,36 @@ router.get('/leaderboard', async (req, res) => {
         });
     } catch (e) {
         console.error('Error fetching admin leaderboard API:', e);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+const parsePage = (req: Request) => {
+    const page = parseInt((req.query.page as string) || '1', 10);
+    return Number.isFinite(page) && page > 0 ? page : 1;
+};
+
+const parseLimit = (req: Request) => {
+    const limit = parseInt((req.query.limit as string) || '20', 10);
+    return Number.isFinite(limit) && limit > 0 && limit <= 100 ? limit : 20;
+};
+
+router.get('/today-checkins', async (req, res) => {
+    try {
+        const data = await getTodayCheckedInUsers(parsePage(req), parseLimit(req));
+        res.json(data);
+    } catch (e) {
+        console.error('Error fetching today checkins API:', e);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+router.get('/today-pending', async (req, res) => {
+    try {
+        const data = await getTodayPendingUsers(parsePage(req), parseLimit(req));
+        res.json(data);
+    } catch (e) {
+        console.error('Error fetching today pending API:', e);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });

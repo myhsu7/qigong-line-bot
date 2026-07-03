@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getCommunityMethodSummary, searchUsersByName, getUserMethodAnalysis, buildUserMethodReview, MethodPeriod, getMethodPeriodRange } from '../services/methodStats';
+import { getCommunityMethodSummary, searchUsersByName, getUserMethodAnalysis, getUserPracticeJournal, buildUserMethodReview, MethodPeriod, getMethodPeriodRange } from '../services/methodStats';
 import moment from 'moment-timezone';
 
 const router = Router();
@@ -44,14 +44,18 @@ router.get('/user', async (req, res) => {
         const userId = req.query.userId as string;
         if (!userId) return res.status(400).json({ error: 'Missing userId' });
 
-        const analysis30d = await getUserMethodAnalysis(userId, '30d');
-        const analysis90d = await getUserMethodAnalysis(userId, '90d');
+        const [analysis30d, analysis90d, journal] = await Promise.all([
+            getUserMethodAnalysis(userId, '30d'),
+            getUserMethodAnalysis(userId, '90d'),
+            getUserPracticeJournal(userId)
+        ]);
         const reviewText = buildUserMethodReview(analysis30d, analysis90d);
 
         res.json({
             '30d': analysis30d,
             '90d': analysis90d,
-            reviewText
+            reviewText,
+            journal
         });
     } catch (e) {
         console.error('Error fetching user method analysis:', e);

@@ -71,6 +71,15 @@
                         <p class="card-text fw-bold" id="reviewText"></p>
                     </div>
                 </div>
+
+                <div class="card mt-3">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted mb-3">最近心得與身體感受</h6>
+                        <div id="journalList">
+                            <p class="text-muted small m-0">目前沒有可顯示的心得或身體感受。</p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div id="userAnalysisEmpty" class="text-center text-muted my-5">
@@ -118,6 +127,13 @@
     
     const analysisContent = document.getElementById('userAnalysisContent');
     const analysisEmpty = document.getElementById('userAnalysisEmpty');
+    const journalList = document.getElementById('journalList');
+    const escapeHtml = (value) => String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 
     const renderMethodTable = (dataObj) => {
         if (dataObj.methods.length === 0) return '<p class="text-muted small p-2 m-0"><%= i18n.no_data %></p>';
@@ -131,6 +147,37 @@
         });
         html += '</tbody></table>';
         return html;
+    };
+
+    const renderJournal = (entries) => {
+        if (!entries || entries.length === 0) {
+            journalList.innerHTML = '<p class="text-muted small m-0">目前沒有可顯示的心得或身體感受。</p>';
+            return;
+        }
+
+        journalList.innerHTML = entries.map((entry) => {
+            const methods = (entry.methodNames || []).map((name) => `<span class="badge text-bg-light border me-1 mb-1">${escapeHtml(name)}</span>`).join('');
+            return `
+                <div class="border rounded p-3 mb-3 bg-white">
+                    <div class="fw-bold mb-2">${escapeHtml(entry.date)}</div>
+                    <div class="mb-2">${methods || '<span class="text-muted small">未記錄功法</span>'}</div>
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <div class="bg-light rounded p-2 h-100">
+                                <div class="text-muted small fw-bold mb-1">練功心得</div>
+                                <div>${escapeHtml(entry.reflectionNote || '未填寫')}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="bg-light rounded p-2 h-100">
+                                <div class="text-muted small fw-bold mb-1">身體感受</div>
+                                <div>${escapeHtml(entry.bodyFeelingNote || '未填寫')}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
     };
 
     const fetchUserAnalysis = async (userId, displayName) => {
@@ -147,10 +194,12 @@
             document.getElementById('stats30d').innerHTML = renderMethodTable(data['30d']);
             document.getElementById('stats90d').innerHTML = renderMethodTable(data['90d']);
             document.getElementById('reviewText').innerText = data.reviewText;
+            renderJournal(data.journal || []);
             
         } catch (e) {
             console.error(e);
             document.getElementById('reviewText').innerText = '載入失敗';
+            renderJournal([]);
         }
     };
 
@@ -188,6 +237,13 @@
     searchInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') doSearch();
     });
+
+    const params = new URLSearchParams(window.location.search);
+    const queryUserId = params.get('userId');
+    const queryName = params.get('name');
+    if (queryUserId) {
+        fetchUserAnalysis(queryUserId, queryName || '學員');
+    }
 </script>
 
 <%- include('../partials/footer') %>

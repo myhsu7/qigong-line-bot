@@ -19,7 +19,11 @@
                         <% data.totals.forEach(function(row, index) { %>
                         <tr>
                             <td class="text-muted"><%= index + 1 %></td>
-                            <td class="fw-bold"><%= row.display_name %></td>
+                            <td class="fw-bold">
+                                <a href="/line/admin-dashboard/method-analysis?period=30d&lang=<%= lang %>&userId=<%= encodeURIComponent(row.line_user_id) %>&name=<%= encodeURIComponent(row.display_name) %>" class="text-decoration-none fw-bold">
+                                    <%= row.display_name %>
+                                </a>
+                            </td>
                             <td class="text-end text-primary fw-bold"><%= row.total_days %></td>
                         </tr>
                         <% }); %>
@@ -47,7 +51,11 @@
                         <% data.streaks.forEach(function(row, index) { %>
                         <tr>
                             <td class="text-muted"><%= index + 1 %></td>
-                            <td class="fw-bold"><%= row.displayName %></td>
+                            <td class="fw-bold">
+                                <a href="/line/admin-dashboard/method-analysis?period=30d&lang=<%= lang %>&userId=<%= encodeURIComponent(row.lineUserId) %>&name=<%= encodeURIComponent(row.displayName) %>" class="text-decoration-none fw-bold">
+                                    <%= row.displayName %>
+                                </a>
+                            </td>
                             <td class="text-end text-danger fw-bold"><%= row.maxStreak %></td>
                         </tr>
                         <% }); %>
