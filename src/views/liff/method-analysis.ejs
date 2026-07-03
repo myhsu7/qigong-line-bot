@@ -63,8 +63,7 @@
     const apiFetch = async (url) => {
       const res = await fetch(url, {
         headers: {
-          'x-line-user-id': lineUserId,
-          'x-line-display-name': displayName
+          'x-line-user-id': lineUserId
         }
       });
       if (!res.ok) {

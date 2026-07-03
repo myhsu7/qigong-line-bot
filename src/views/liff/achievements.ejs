@@ -42,7 +42,7 @@
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
     const apiFetch = async (url) => {
-      const res = await fetch(url, { headers: { 'x-line-user-id': lineUserId, 'x-line-display-name': displayName } });
+      const res = await fetch(url, { headers: { 'x-line-user-id': lineUserId } });
       if (!res.ok) {
         const body = await res.json().catch(() => ({ error: 'Request failed' }));
         throw new Error(body.error || 'Request failed');
