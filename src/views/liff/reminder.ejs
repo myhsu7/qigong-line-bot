@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>提醒設定</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; background: #f6f7fb; color: #1f2937; }
+    .container { max-width: 640px; margin: 0 auto; padding: 20px; }
+    .card { background:#fff; border-radius:14px; padding:20px; box-shadow:0 8px 24px rgba(0,0,0,.08); margin-bottom:16px; }
+    h1 { font-size:24px; margin:0 0 8px; }
+    .muted { color:#6b7280; line-height:1.7; }
+    .status { display:inline-flex; align-items:center; border-radius:999px; padding:8px 12px; background:#fef3c7; color:#92400e; font-weight:700; }
+    ul { padding-left: 20px; color:#4b5563; line-height:1.8; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>提醒設定</h1>
+      <div class="muted">LINE 版目前使用固定提醒機制，這裡先提供目前提醒規則與使用方式說明。</div>
+    </div>
+
+    <div class="card">
+      <div class="status">目前為固定提醒模式</div>
+      <ul>
+        <li>每日晚上 8:00（Asia/Taipei）由 bot 對已登記群組發送提醒。</li>
+        <li>群組提醒會引導你回到 1 對 1 視窗完成打卡，避免把摘要發到群組裡。</li>
+        <li>目前 LINE 版尚未開放個人化提醒時間與開關設定。</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0;">如果你想要更完整的提醒設定</h2>
+      <div class="muted">
+        目前 Telegram 版已支援個人提醒時間與時區設定。LINE 版若後續補上個人提醒設定，這個頁面會直接升級為可操作的設定頁。
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const LIFF_ID = '<%= liffId %>';
+    const init = async () => {
+      await liff.init({ liffId: LIFF_ID });
+      if (!liff.isLoggedIn()) {
+        liff.login({ redirectUri: window.location.href });
+      }
+    };
+    init();
+  </script>
+</body>
+</html>

@@ -2,6 +2,7 @@ import { Request, Router } from 'express';
 import { getPracticeMethods, getTodayLineCheckin, saveTodayLineCheckin, upsertLineUser, evaluateLineLiffBadges } from '../services/lineCheckin';
 import { db } from '../db';
 import moment from 'moment-timezone';
+import { buildUserMethodReview, getUserMethodAnalysis, getUserPracticeJournal } from '../services/methodStats';
 
 const router = Router();
 
@@ -300,6 +301,80 @@ router.get('/history', async (req, res) => {
     } catch (error) {
         console.error('[liff-api] failed to load history', error);
         res.status(500).json({ error: 'Failed to load history' });
+    }
+});
+
+router.get('/method-analysis', async (req, res) => {
+    try {
+        const { lineUserId, displayName } = resolveLineUser(req);
+        if (!lineUserId) return res.status(400).json({ error: 'Missing lineUserId' });
+        await upsertLineUser(lineUserId, displayName || null);
+
+        const [analysis30d, analysis90d, journal] = await Promise.all([
+            getUserMethodAnalysis(lineUserId, '30d'),
+            getUserMethodAnalysis(lineUserId, '90d'),
+            getUserPracticeJournal(lineUserId)
+        ]);
+
+        res.json({
+            analysis30d,
+            analysis90d,
+            reviewText: buildUserMethodReview(analysis30d, analysis90d),
+            journal
+        });
+    } catch (error) {
+        console.error('[liff-api] failed to load method analysis', error);
+        res.status(500).json({ error: 'Failed to load method analysis' });
+    }
+});
+
+router.get('/achievements', async (req, res) => {
+    try {
+        const { lineUserId, displayName } = resolveLineUser(req);
+        if (!lineUserId) return res.status(400).json({ error: 'Missing lineUserId' });
+        await upsertLineUser(lineUserId, displayName || null);
+
+        const [statsRes, badgesRes] = await Promise.all([
+            db.query('SELECT current_streak, longest_streak, total_checkins FROM users WHERE line_user_id = $1', [lineUserId]),
+            db.query(
+                `SELECT b.emoji, b.name, b.description, u.earned_year
+                 FROM user_badges u
+                 JOIN badges b ON u.badge_id = b.id
+                 WHERE u.line_user_id = $1
+                 ORDER BY u.unlocked_at ASC`,
+                [lineUserId]
+            )
+        ]);
+
+        const statsRow = statsRes.rows[0] || {};
+        const totalCheckins = Number(statsRow.total_checkins || 0);
+        let levelTitle = '練氣 (Level 1)';
+        let nextMilestone: { title: string; remaining: number; unit: string } | null = null;
+        if (totalCheckins >= 200) {
+            levelTitle = '化境 (Level 4)';
+        } else if (totalCheckins >= 90) {
+            levelTitle = '結丹 (Level 3)';
+            nextMilestone = { title: '化境 (Level 4)', remaining: 200 - totalCheckins, unit: '天總打卡' };
+        } else if (totalCheckins >= 30) {
+            levelTitle = '築基 (Level 2)';
+            nextMilestone = { title: '結丹 (Level 3)', remaining: 90 - totalCheckins, unit: '天總打卡' };
+        } else {
+            nextMilestone = { title: '築基 (Level 2)', remaining: 30 - totalCheckins, unit: '天總打卡' };
+        }
+
+        res.json({
+            stats: {
+                currentStreak: Number(statsRow.current_streak || 0),
+                longestStreak: Number(statsRow.longest_streak || 0),
+                totalCheckins
+            },
+            badges: badgesRes.rows,
+            levelTitle,
+            nextMilestone
+        });
+    } catch (error) {
+        console.error('[liff-api] failed to load achievements', error);
+        res.status(500).json({ error: 'Failed to load achievements' });
     }
 });
 

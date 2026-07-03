@@ -60,6 +60,12 @@ ADMIN_USER_ID=your_line_user_id
 LINE_BOT_SHORTCUT_URL=https://line.me/R/oaMessage/%40your_oa_id/?%E2%9C%85%20Check-In
 LIFF_ID=your_liff_id
 LINE_LIFF_CHECKIN_URL=https://liff.line.me/your_liff_id
+LIFF_ID_CHECKIN=your_checkin_liff_id
+LIFF_ID_LEADERBOARD=your_leaderboard_liff_id
+LIFF_ID_HISTORY=your_history_liff_id
+LIFF_ID_METHOD_ANALYSIS=your_method_analysis_liff_id
+LIFF_ID_ACHIEVEMENTS=your_achievements_liff_id
+LIFF_ID_REMINDER=your_reminder_liff_id
 ADMIN_DASH_USER=admin
 ADMIN_DASH_PASS=your_strong_password
 ADMIN_ALLOWED_IP_PREFIX=100.
@@ -67,8 +73,8 @@ ADMIN_ALLOWED_IP_PREFIX=100.
 *(If you are using the provided Docker setup, the default DB credentials will work immediately).*
 *(For `ADMIN_USER_ID`, this is your personal LINE user ID, needed to execute `!admin` commands).*
 *(For `LINE_BOT_SHORTCUT_URL`, this is the deep link used in group reminders to open the 1-on-1 chat with the bot and prefill `✅ Check-In`, so LIFF check-in runs in DM context instead of posting summaries back to the group).*
-*(For `LIFF_ID`, this is the LINE LIFF app id used by the structured check-in page).*
-*(For `LINE_LIFF_CHECKIN_URL`, this is the URL used by the bot and Rich Menu when opening check-in in 1-on-1 chat; prefer the official LIFF launch URL: `https://liff.line.me/{LIFF_ID}`. The LIFF app endpoint in LINE Developers should still point to `/line/liff/checkin`).*
+*(For `LIFF_ID`, this is the legacy shared LIFF app id. It can still be used as a fallback, but the recommended setup now uses dedicated LIFF apps per feature.)*
+*(For `LINE_LIFF_CHECKIN_URL`, this is the legacy shared LIFF launch URL. With dedicated LIFF apps configured, the bot will prefer `LIFF_ID_CHECKIN`, `LIFF_ID_LEADERBOARD`, `LIFF_ID_HISTORY`, `LIFF_ID_METHOD_ANALYSIS`, `LIFF_ID_ACHIEVEMENTS`, and `LIFF_ID_REMINDER`.)*
 
 ⚠️ **Important:** `ADMIN_USER_ID` is **NOT** your regular LINE ID (the one you give friends to add you). It is your Developer User ID, which always starts with the letter `U` (e.g., `U1234567890abcdef...`). You can find this ID in the [LINE Developer Console](https://developers.line.biz/console/) by navigating to your Provider -> your Messaging API Channel -> clicking the **Basic settings** tab and scrolling all the way to the bottom to "**Your user ID**".
 
@@ -117,12 +123,15 @@ npm start
        - **Menu bar text:** Enter "Menu" or "選單".
        - **Default behavior:** Select "Display".
     6. **Content & Action Settings:**
-       - **Select a template:** Choose a template with 3 distinct buttons/areas.
+       - **Select a template:** Choose a template with 6 distinct buttons/areas.
        - **Upload Background Image:** Upload a matching background image (check LINE's dimension requirements).
-       - **Action A (Check-In):** Set Action type to **Text** and enter exactly `✅ Check-In`.
-       - **Action B (Leaderboard):** Set Action type to **Text** and enter exactly `🏆 Leaderboard`.
-       - **Action C (My Stats):** Set Action type to **Text** and enter exactly `📊 My Stats`.
-    7. Click **Save**. The menu will now appear for anyone who adds your bot.
+       - **Action A (Check-In):** Set Action type to **URI** and point to the official LIFF URL for Check-In.
+       - **Action B (Leaderboard):** Set Action type to **URI** and point to the official LIFF URL for Leaderboard.
+       - **Action C (History):** Set Action type to **URI** and point to the official LIFF URL for History.
+       - **Action D (Method Analysis):** Set Action type to **URI** and point to the official LIFF URL for personal Method Analysis.
+       - **Action E (Achievements):** Set Action type to **URI** and point to the official LIFF URL for Achievements.
+       - **Action F (Reminder):** Set Action type to **URI** and point to the official LIFF URL for Reminder info/settings.
+     7. Click **Save**. The menu will now appear for anyone who adds your bot.
 
 ## 🏆 Leaderboards
 
@@ -174,9 +183,40 @@ If you have configured `ADMIN_USER_ID` in your `.env` file, you can type these c
 - `!admin resend-reminder`: Manually trigger the 8:00 PM daily reminder broadcast.
 - `!admin broadcast [message]`: Send an ad-hoc custom message to all registered active groups.
 
-## LINE LIFF Structured Check-In
+## LINE LIFF Pages
 
-The LINE bot now supports a LIFF-based structured check-in flow.
+The LINE bot now supports multiple LIFF pages for the 6-button Rich Menu design.
+
+### Recommended 6-button layout
+
+First row:
+- Check-In
+- Leaderboard
+- History
+
+Second row:
+- Method Analysis
+- Achievements
+- Reminder
+
+### LIFF routes
+
+- `GET /line/liff/checkin`
+- `GET /line/liff/leaderboard`
+- `GET /line/liff/history`
+- `GET /line/liff/method-analysis`
+- `GET /line/liff/achievements`
+- `GET /line/liff/reminder`
+
+### LIFF APIs
+
+- `GET /line/api/liff/practice-methods`
+- `GET /line/api/liff/checkin/today`
+- `POST /line/api/liff/checkin`
+- `GET /line/api/liff/leaderboard`
+- `GET /line/api/liff/history`
+- `GET /line/api/liff/method-analysis`
+- `GET /line/api/liff/achievements`
 
 ### User flow
 
@@ -188,13 +228,6 @@ The LINE bot now supports a LIFF-based structured check-in flow.
    - optionally fills body feeling note
 4. Submit saves today's check-in.
 5. If the user already checked in today, the LIFF page prefills today's content and allows overwrite update without increasing total days twice.
-
-### Routes
-
-- `GET /line/liff/checkin`
-- `GET /line/api/liff/practice-methods`
-- `GET /line/api/liff/checkin/today`
-- `POST /line/api/liff/checkin`
 
 ### Database migration
 
@@ -212,21 +245,31 @@ This migration adds:
 
 ### LIFF setup in LINE Developers Console
 
-1. Create a new LIFF app under your LINE channel.
-2. Set the endpoint URL to:
+Create dedicated LIFF apps for each user-facing page to avoid the old "open check-in then redirect" flicker.
+
+Recommended mapping:
+
+| LIFF ID env | Endpoint URL |
+|---|---|
+| `LIFF_ID_CHECKIN` | `/line/liff/checkin` |
+| `LIFF_ID_LEADERBOARD` | `/line/liff/leaderboard` |
+| `LIFF_ID_HISTORY` | `/line/liff/history` |
+| `LIFF_ID_METHOD_ANALYSIS` | `/line/liff/method-analysis` |
+| `LIFF_ID_ACHIEVEMENTS` | `/line/liff/achievements` |
+| `LIFF_ID_REMINDER` | `/line/liff/reminder` |
+
+Each LIFF app should use its own official launch URL:
 
 ```text
-https://your-domain.example.com/line/liff/checkin
+https://liff.line.me/{LIFF_ID_CHECKIN}
+https://liff.line.me/{LIFF_ID_LEADERBOARD}
+https://liff.line.me/{LIFF_ID_HISTORY}
+https://liff.line.me/{LIFF_ID_METHOD_ANALYSIS}
+https://liff.line.me/{LIFF_ID_ACHIEVEMENTS}
+https://liff.line.me/{LIFF_ID_REMINDER}
 ```
 
-3. Copy the generated `LIFF_ID` into `.env`.
-4. Set the bot launch URL to the official LIFF URL:
-
-```env
-LINE_LIFF_CHECKIN_URL=https://liff.line.me/{LIFF_ID}
-```
-
-Using the normal endpoint URL directly can open the page outside of LIFF client context; in that case `liff.sendMessages()` and `liff.closeWindow()` may not work.
+If only the legacy shared `LIFF_ID` is configured, the bot will fall back to the old shared-entry behavior for compatibility.
 
 ### Compatibility
 

@@ -14,9 +14,15 @@ const lineConfig = {
 
 const client = new messagingApi.MessagingApiClient(lineConfig);
 const LIFF_ID = process.env.LIFF_ID || '';
-const LINE_LIFF_CHECKIN_URL = LIFF_ID ? `https://liff.line.me/${LIFF_ID}` : (process.env.LINE_LIFF_CHECKIN_URL || '');
+const LIFF_ID_CHECKIN = process.env.LIFF_ID_CHECKIN || LIFF_ID;
+const LIFF_ID_LEADERBOARD = process.env.LIFF_ID_LEADERBOARD || '';
+const LIFF_ID_HISTORY = process.env.LIFF_ID_HISTORY || '';
+const LIFF_ID_METHOD_ANALYSIS = process.env.LIFF_ID_METHOD_ANALYSIS || '';
+const LIFF_ID_ACHIEVEMENTS = process.env.LIFF_ID_ACHIEVEMENTS || '';
+const LIFF_ID_REMINDER = process.env.LIFF_ID_REMINDER || '';
+const LINE_LIFF_CHECKIN_URL = LIFF_ID_CHECKIN ? `https://liff.line.me/${LIFF_ID_CHECKIN}` : (process.env.LINE_LIFF_CHECKIN_URL || '');
 
-const buildLineLiffEntryUrl = (page?: string, extraParams?: Record<string, string>) => {
+const buildSharedLineLiffEntryUrl = (page?: string, extraParams?: Record<string, string>) => {
     if (!LINE_LIFF_CHECKIN_URL) return '';
 
     const url = new URL(LINE_LIFF_CHECKIN_URL);
@@ -31,8 +37,25 @@ const buildLineLiffEntryUrl = (page?: string, extraParams?: Record<string, strin
     return url.toString();
 };
 
-const LINE_LIFF_LEADERBOARD_URL = buildLineLiffEntryUrl('leaderboard', { period: 'all' });
-const LINE_LIFF_HISTORY_URL = buildLineLiffEntryUrl('history');
+const buildDedicatedLineLiffUrl = (liffId: string, fallbackPage?: string, extraParams?: Record<string, string>) => {
+    if (liffId) {
+        const url = new URL(`https://liff.line.me/${liffId}`);
+        if (extraParams) {
+            Object.entries(extraParams).forEach(([key, value]) => {
+                if (value) url.searchParams.set(key, value);
+            });
+        }
+        return url.toString();
+    }
+
+    return buildSharedLineLiffEntryUrl(fallbackPage, extraParams);
+};
+
+const LINE_LIFF_LEADERBOARD_URL = buildDedicatedLineLiffUrl(LIFF_ID_LEADERBOARD, 'leaderboard', { period: 'all' });
+const LINE_LIFF_HISTORY_URL = buildDedicatedLineLiffUrl(LIFF_ID_HISTORY, 'history');
+const LINE_LIFF_METHOD_ANALYSIS_URL = buildDedicatedLineLiffUrl(LIFF_ID_METHOD_ANALYSIS, 'method-analysis');
+const LINE_LIFF_ACHIEVEMENTS_URL = buildDedicatedLineLiffUrl(LIFF_ID_ACHIEVEMENTS, 'achievements');
+const LINE_LIFF_REMINDER_URL = buildDedicatedLineLiffUrl(LIFF_ID_REMINDER, 'reminder');
 
 // Simple in-memory state for user sessions
 const userStates = new Map<string, string>();
@@ -212,7 +235,7 @@ export const handleEvent = async (event: webhook.Event): Promise<any> => {
     }
 
     if (text === '🏆 Weekly Leaderboard') {
-        const leaderboardUrl = buildLineLiffEntryUrl('leaderboard', { period: 'week' });
+        const leaderboardUrl = buildDedicatedLineLiffUrl(LIFF_ID_LEADERBOARD, 'leaderboard', { period: 'week' });
         if (leaderboardUrl) {
             return client.replyMessage({
                 replyToken,
@@ -228,7 +251,7 @@ export const handleEvent = async (event: webhook.Event): Promise<any> => {
     }
 
     if (text === '🏆 Monthly Leaderboard') {
-        const leaderboardUrl = buildLineLiffEntryUrl('leaderboard', { period: 'month' });
+        const leaderboardUrl = buildDedicatedLineLiffUrl(LIFF_ID_LEADERBOARD, 'leaderboard', { period: 'month' });
         if (leaderboardUrl) {
             return client.replyMessage({
                 replyToken,
@@ -244,7 +267,7 @@ export const handleEvent = async (event: webhook.Event): Promise<any> => {
     }
 
     if (text === '🏆 Quarterly Leaderboard') {
-        const leaderboardUrl = buildLineLiffEntryUrl('leaderboard', { period: 'quarter' });
+        const leaderboardUrl = buildDedicatedLineLiffUrl(LIFF_ID_LEADERBOARD, 'leaderboard', { period: 'quarter' });
         if (leaderboardUrl) {
             return client.replyMessage({
                 replyToken,
@@ -351,6 +374,27 @@ export const handleEvent = async (event: webhook.Event): Promise<any> => {
             });
         }
         return null;
+    }
+
+    if (text === '🧘 功法分析' && LINE_LIFF_METHOD_ANALYSIS_URL) {
+        return client.replyMessage({
+            replyToken,
+            messages: [{ type: 'text', text: `請點下方連結開啟個人功法分析：\n${LINE_LIFF_METHOD_ANALYSIS_URL}` }]
+        });
+    }
+
+    if (text === '🏅 我的成就' && LINE_LIFF_ACHIEVEMENTS_URL) {
+        return client.replyMessage({
+            replyToken,
+            messages: [{ type: 'text', text: `請點下方連結開啟成就頁：\n${LINE_LIFF_ACHIEVEMENTS_URL}` }]
+        });
+    }
+
+    if (text === '⏰ 提醒設定' && LINE_LIFF_REMINDER_URL) {
+        return client.replyMessage({
+            replyToken,
+            messages: [{ type: 'text', text: `請點下方連結開啟提醒設定說明：\n${LINE_LIFF_REMINDER_URL}` }]
+        });
     }
 
     // Handle Note input
