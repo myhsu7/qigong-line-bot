@@ -3,30 +3,39 @@
 <div class="row">
     <div class="col-12">
         <div class="chart-container">
-            <h5 class="mb-4">今日打卡狀態</h5>
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+                <div>
+                    <h5 class="mb-1">打卡狀態</h5>
+                    <div class="text-muted small" id="statusDateLabel">載入中...</div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-sm btn-outline-primary" type="button" id="prevStatusDateBtn">← 前一日</button>
+                    <button class="btn btn-sm btn-outline-secondary" type="button" id="nextStatusDateBtn" disabled>後一日 →</button>
+                </div>
+            </div>
             <div class="row g-3">
                 <div class="col-md-6">
                     <div class="kpi-card border border-success-subtle bg-success-subtle" role="button" id="checkedInCard">
-                        <p>今日已打卡</p>
+                        <p>已打卡</p>
                         <h3 class="text-success" id="checkedInCount">-</h3>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="kpi-card border border-warning-subtle bg-warning-subtle" role="button" id="pendingCard">
-                        <p>今日尚未打卡</p>
+                        <p>尚未打卡</p>
                         <h3 class="text-warning-emphasis" id="pendingCount">-</h3>
                     </div>
                 </div>
             </div>
 
             <div id="checkedInPanel" class="mt-4 d-none">
-                <h6 class="mb-3">今日已打卡學員</h6>
+                <h6 class="mb-3">已打卡學員</h6>
                 <div id="checkedInList"></div>
                 <div id="checkedInPager" class="d-flex align-items-center gap-2 mt-3"></div>
             </div>
 
             <div id="pendingPanel" class="mt-4 d-none">
-                <h6 class="mb-3">今日尚未打卡學員</h6>
+                <h6 class="mb-3">尚未打卡學員</h6>
                 <div id="pendingList"></div>
                 <div id="pendingPager" class="d-flex align-items-center gap-2 mt-3"></div>
             </div>
@@ -69,12 +78,27 @@
 <script>
     const trendData = <%- JSON.stringify(data.trend) %>;
     const lang = <%- JSON.stringify(lang) %>;
+    const todayDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(new Date());
+    let currentStatusDate = todayDate;
+    let activeStatusPanel = null;
     const escapeHtml = (value) => String(value || '')
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+
+    const shiftDate = (dateStr, deltaDays) => {
+        const [year, month, day] = dateStr.split('-').map(Number);
+        const date = new Date(Date.UTC(year, month - 1, day));
+        date.setUTCDate(date.getUTCDate() + deltaDays);
+        return date.toISOString().slice(0, 10);
+    };
+
+    const updateStatusDateUi = () => {
+        document.getElementById('statusDateLabel').textContent = `查看日期：${currentStatusDate}`;
+        document.getElementById('nextStatusDateBtn').disabled = currentStatusDate >= todayDate;
+    };
 
     const renderUserList = (containerId, users) => {
         const container = document.getElementById(containerId);
@@ -116,29 +140,48 @@
         container.appendChild(next);
     };
 
-    const loadTodayList = async (type, page = 1) => {
-        const res = await fetch(`/line/api/admin/${type}?page=${page}&limit=20`);
+    const loadStatusList = async (type, page = 1) => {
+        const res = await fetch(`/line/api/admin/${type}?date=${encodeURIComponent(currentStatusDate)}&page=${page}&limit=20`);
         const data = await res.json();
         const isChecked = type === 'today-checkins';
         document.getElementById(isChecked ? 'checkedInCount' : 'pendingCount').textContent = `${data.total}`;
         renderUserList(isChecked ? 'checkedInList' : 'pendingList', data.users || []);
-        renderPager(isChecked ? 'checkedInPager' : 'pendingPager', data.page, data.totalPages, (nextPage) => loadTodayList(type, nextPage));
+        renderPager(isChecked ? 'checkedInPager' : 'pendingPager', data.page, data.totalPages, (nextPage) => loadStatusList(type, nextPage));
+        updateStatusDateUi();
     };
 
     const showPanel = (panelIdToShow) => {
         ['checkedInPanel', 'pendingPanel'].forEach((id) => {
             document.getElementById(id).classList.toggle('d-none', id !== panelIdToShow);
         });
+        activeStatusPanel = panelIdToShow;
     };
 
     document.getElementById('checkedInCard').addEventListener('click', () => {
         showPanel('checkedInPanel');
-        loadTodayList('today-checkins', 1);
+        loadStatusList('today-checkins', 1);
     });
 
     document.getElementById('pendingCard').addEventListener('click', () => {
         showPanel('pendingPanel');
-        loadTodayList('today-pending', 1);
+        loadStatusList('today-pending', 1);
+    });
+
+    document.getElementById('prevStatusDateBtn').addEventListener('click', () => {
+        currentStatusDate = shiftDate(currentStatusDate, -1);
+        loadStatusList('today-checkins', 1);
+        loadStatusList('today-pending', 1);
+        if (activeStatusPanel === 'checkedInPanel') loadStatusList('today-checkins', 1);
+        if (activeStatusPanel === 'pendingPanel') loadStatusList('today-pending', 1);
+    });
+
+    document.getElementById('nextStatusDateBtn').addEventListener('click', () => {
+        if (currentStatusDate >= todayDate) return;
+        currentStatusDate = shiftDate(currentStatusDate, 1);
+        loadStatusList('today-checkins', 1);
+        loadStatusList('today-pending', 1);
+        if (activeStatusPanel === 'checkedInPanel') loadStatusList('today-checkins', 1);
+        if (activeStatusPanel === 'pendingPanel') loadStatusList('today-pending', 1);
     });
     
     if (trendData.length > 0) {
@@ -169,8 +212,9 @@
         });
     }
 
-    loadTodayList('today-checkins', 1);
-    loadTodayList('today-pending', 1);
+    updateStatusDateUi();
+    loadStatusList('today-checkins', 1);
+    loadStatusList('today-pending', 1);
 </script>
 
 <%- include('../partials/footer') %>

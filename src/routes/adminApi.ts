@@ -1,5 +1,5 @@
 import { Request, Router } from 'express';
-import { getOverviewStats, getLeaderboardStats, AdminPeriod, getAdminPeriodRange, getTodayCheckedInUsers, getTodayPendingUsers } from '../services/adminStats';
+import { getOverviewStats, getLeaderboardStats, AdminPeriod, getAdminPeriodRange, getCheckedInUsersByDate, getPendingUsersByDate } from '../services/adminStats';
 import moment from 'moment-timezone';
 
 const router = Router();
@@ -65,22 +65,40 @@ const parseLimit = (req: Request) => {
     return Number.isFinite(limit) && limit > 0 && limit <= 100 ? limit : 20;
 };
 
+const parseTargetDate = (req: Request) => {
+    const rawDate = (req.query.date as string) || moment().tz('Asia/Taipei').format('YYYY-MM-DD');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
+        throw new Error('Invalid date. Use YYYY-MM-DD.');
+    }
+    const parsed = moment.tz(rawDate, 'YYYY-MM-DD', true, 'Asia/Taipei');
+    if (!parsed.isValid()) {
+        throw new Error('Invalid date. Use YYYY-MM-DD.');
+    }
+    return parsed.format('YYYY-MM-DD');
+};
+
 router.get('/today-checkins', async (req, res) => {
     try {
-        const data = await getTodayCheckedInUsers(parsePage(req), parseLimit(req));
+        const data = await getCheckedInUsersByDate(parseTargetDate(req), parsePage(req), parseLimit(req));
         res.json(data);
     } catch (e) {
         console.error('Error fetching today checkins API:', e);
+        if (e instanceof Error && e.message.startsWith('Invalid date')) {
+            return res.status(400).json({ error: e.message });
+        }
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
 
 router.get('/today-pending', async (req, res) => {
     try {
-        const data = await getTodayPendingUsers(parsePage(req), parseLimit(req));
+        const data = await getPendingUsersByDate(parseTargetDate(req), parsePage(req), parseLimit(req));
         res.json(data);
     } catch (e) {
         console.error('Error fetching today pending API:', e);
+        if (e instanceof Error && e.message.startsWith('Invalid date')) {
+            return res.status(400).json({ error: e.message });
+        }
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });

@@ -113,20 +113,21 @@ export interface TodayCheckinPage {
     page: number;
     limit: number;
     totalPages: number;
+    date: string;
+    isToday: boolean;
     users: TodayCheckinUser[];
 }
 
 const getTodayDateStr = () => moment().tz(TIMEZONE).format('YYYY-MM-DD');
 
-export const getTodayCheckedInUsers = async (page = 1, limit = 20): Promise<TodayCheckinPage> => {
-    const today = getTodayDateStr();
+export const getCheckedInUsersByDate = async (dateStr: string, page = 1, limit = 20): Promise<TodayCheckinPage> => {
     const offset = (page - 1) * limit;
 
     const countRes = await db.query(
         `SELECT COUNT(DISTINCT line_user_id) AS total
          FROM checkin_logs
          WHERE checkin_date = $1`,
-        [today]
+        [dateStr]
     );
     const total = parseInt(countRes.rows[0]?.total || '0', 10);
 
@@ -138,7 +139,7 @@ export const getTodayCheckedInUsers = async (page = 1, limit = 20): Promise<Toda
          GROUP BY u.line_user_id, u.display_name
          ORDER BY MAX(c.created_at) DESC
          LIMIT $2 OFFSET $3`,
-        [today, limit, offset]
+        [dateStr, limit, offset]
     );
 
     return {
@@ -146,6 +147,8 @@ export const getTodayCheckedInUsers = async (page = 1, limit = 20): Promise<Toda
         page,
         limit,
         totalPages: Math.max(1, Math.ceil(total / limit)),
+        date: dateStr,
+        isToday: dateStr === getTodayDateStr(),
         users: rows.map((row) => ({
             lineUserId: row.line_user_id,
             displayName: row.display_name || 'Unknown'
@@ -153,8 +156,7 @@ export const getTodayCheckedInUsers = async (page = 1, limit = 20): Promise<Toda
     };
 };
 
-export const getTodayPendingUsers = async (page = 1, limit = 20): Promise<TodayCheckinPage> => {
-    const today = getTodayDateStr();
+export const getPendingUsersByDate = async (dateStr: string, page = 1, limit = 20): Promise<TodayCheckinPage> => {
     const offset = (page - 1) * limit;
 
     const countRes = await db.query(
@@ -164,7 +166,7 @@ export const getTodayPendingUsers = async (page = 1, limit = 20): Promise<TodayC
              SELECT 1 FROM checkin_logs c
              WHERE c.line_user_id = u.line_user_id AND c.checkin_date = $1
          )`,
-        [today]
+        [dateStr]
     );
     const total = parseInt(countRes.rows[0]?.total || '0', 10);
 
@@ -177,7 +179,7 @@ export const getTodayPendingUsers = async (page = 1, limit = 20): Promise<TodayC
          )
          ORDER BY u.display_name ASC, u.line_user_id ASC
          LIMIT $2 OFFSET $3`,
-        [today, limit, offset]
+        [dateStr, limit, offset]
     );
 
     return {
@@ -185,6 +187,8 @@ export const getTodayPendingUsers = async (page = 1, limit = 20): Promise<TodayC
         page,
         limit,
         totalPages: Math.max(1, Math.ceil(total / limit)),
+        date: dateStr,
+        isToday: dateStr === getTodayDateStr(),
         users: rows.map((row) => ({
             lineUserId: row.line_user_id,
             displayName: row.display_name || 'Unknown'
