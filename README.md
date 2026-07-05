@@ -292,6 +292,52 @@ A secure, read-only web dashboard is available to view check-in trends and commu
    - **Method Analysis:** View community-wide method distributions (Pie chart) and search individual users to see their personal method composition ratios over the last 30 and 90 days.
    - Multilingual support (zh-TW and English, determined by browser language or `?lang=` query param).
 
+## Logging and Retry
+
+The LINE bot now includes basic transient-failure protection and daily error log files.
+
+### Database timeouts / retry
+
+- PostgreSQL pool uses:
+  - `connectionTimeoutMillis = 5000`
+  - `idleTimeoutMillis = 30000`
+  - `query_timeout = 10000`
+  - `statement_timeout = 10000`
+- A `db.queryWithRetry(...)` helper is available for important read paths.
+- Transient DB/network issues such as connection resets, temporary timeout expiry, or short PostgreSQL restarts will be retried once with a short backoff.
+
+### Error log files
+
+- All `console.error(...)` output is also written to a daily rotating log file.
+- Log directory:
+
+```text
+logs/
+```
+
+- File format:
+
+```text
+logs/error-YYYY-MM-DD.log
+```
+
+Examples:
+
+```bash
+tail -f logs/error-2026-07-05.log
+grep "failed to load practice methods" logs/error-2026-07-05.log
+```
+
+### Check-in page diagnostics
+
+The LIFF check-in page no longer treats initial data loading as a single opaque failure.
+It now distinguishes between:
+
+- `功法列表載入失敗：...`
+- `今日打卡資料載入失敗：...`
+
+The corresponding server routes also log load duration in milliseconds so intermittent failures are easier to trace.
+
 ## Tech Stack
 - TypeScript / Node.js
 - Express
