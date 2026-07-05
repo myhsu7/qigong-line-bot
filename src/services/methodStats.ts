@@ -5,16 +5,17 @@ const TIMEZONE = 'Asia/Taipei';
 
 // 1. Method Dictionary Definition
 export const methodDictionary = [
-    { name: '大雁功', aliases: ['大雁功', '大雁初高', '大雁初級', '大雁高級'] },
-    { name: '五禽戲', aliases: ['五禽戲'] },
-    { name: '回春功', aliases: ['回春功', '回春'] },
-    { name: '龜壽功', aliases: ['龜壽功'] },
-    { name: '正陽功', aliases: ['正陽功', '正陽晨功'] },
+    { name: '大雁功', aliases: ['大雁功', '大雁初', '大雁高', '大雁初高', '大雁初級', '大雁高級'] },
+    { name: '五禽戲', aliases: ['五禽戲', '鶴戲', '猿戲', '虎戲', '熊戲', '鹿戲'] },
+    { name: '回春功', aliases: ['回春功', '回春', '回春初', '回春中'] },
+    { name: '龜壽功', aliases: ['龜壽功', '八卦功', '乾坤功', '鳳翔與龜縮'] },
+    { name: '正陽功', aliases: ['正陽功', '正陽晨功', '晨功', '夜功'] },
     { name: '神奇晃海功', aliases: ['神奇晃海功', '晃海功', '晃海'] },
     { name: '蓮花養心法', aliases: ['蓮花養心法', '蓮花', '蓮花功'] },
     { name: '和氣舒壓法', aliases: ['和氣舒壓法', '和氣', '舒壓法'] },
     { name: '三窩功', aliases: ['三窩功'] },
-    { name: '六音理臟法', aliases: ['六音理臟法'] }
+    { name: '六音理臟法', aliases: ['六音理臟法'] },
+    { name: '靜功', aliases: ['靜功', '周天靜功', '七星心法'] }
 ];
 
 const leafMethodCatalog = [
@@ -114,10 +115,11 @@ export const getCommunityMethodSummary = async (period: MethodPeriod = '30d') =>
     const query = `
         ${getDictCTE()},
         structured AS (
-            SELECT DISTINCT l.line_user_id, l.checkin_date AS local_date, pm.name_zh AS method_name
+            SELECT DISTINCT l.line_user_id, l.checkin_date AS local_date, COALESCE(parent_pm.name_zh, pm.name_zh) AS method_name
             FROM checkin_logs l
             JOIN checkin_method_selections s ON s.checkin_log_id = l.id
             JOIN practice_methods pm ON pm.id = s.practice_method_id
+            LEFT JOIN practice_methods parent_pm ON parent_pm.id = pm.parent_id
             WHERE l.created_at >= $2 AND l.created_at < $3
         ),
         fallback_logs AS (
@@ -185,10 +187,11 @@ export const getUserMethodAnalysis = async (userId: string, period: MethodPeriod
     const query = `
         ${getDictCTE()},
         structured AS (
-            SELECT DISTINCT l.checkin_date AS local_date, pm.name_zh AS method_name
+            SELECT DISTINCT l.checkin_date AS local_date, COALESCE(parent_pm.name_zh, pm.name_zh) AS method_name
             FROM checkin_logs l
             JOIN checkin_method_selections s ON s.checkin_log_id = l.id
             JOIN practice_methods pm ON pm.id = s.practice_method_id
+            LEFT JOIN practice_methods parent_pm ON parent_pm.id = pm.parent_id
             WHERE l.line_user_id = $2 AND l.created_at >= $3 AND l.created_at < $4
         ),
         fallback_logs AS (
