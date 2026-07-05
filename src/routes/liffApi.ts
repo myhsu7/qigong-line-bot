@@ -73,24 +73,28 @@ const getUserBadgesSnapshot = async (lineUserId: string) => {
 };
 
 router.get('/practice-methods', async (req, res) => {
+    const startedAt = Date.now();
     try {
         const methods = await getPracticeMethods();
+        console.log(`[liff-api] loaded practice methods in ${Date.now() - startedAt}ms (${methods.length} roots)`);
         res.json({ methods });
     } catch (error) {
-        console.error('[liff-api] failed to load practice methods', error);
+        console.error(`[liff-api] failed to load practice methods after ${Date.now() - startedAt}ms`, error);
         res.status(500).json({ error: 'Failed to load practice methods' });
     }
 });
 
 router.get('/checkin/today', async (req, res) => {
+    const startedAt = Date.now();
     try {
         const { lineUserId, displayName } = resolveLineUser(req);
         if (!lineUserId) return res.status(400).json({ error: 'Missing lineUserId' });
         await upsertLineUser(lineUserId, displayName || null);
         const data = await getTodayLineCheckin(lineUserId);
+        console.log(`[liff-api] loaded today checkin in ${Date.now() - startedAt}ms for ${lineUserId}`);
         res.json(data);
     } catch (error) {
-        console.error('[liff-api] failed to load today checkin', error);
+        console.error(`[liff-api] failed to load today checkin after ${Date.now() - startedAt}ms`, error);
         res.status(500).json({ error: 'Failed to load today checkin' });
     }
 });

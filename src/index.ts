@@ -14,8 +14,10 @@ import adminMethodAnalysisApiRoutes from './routes/adminMethodAnalysisApi';
 import adminMethodAnalysisPagesRoutes from './routes/adminMethodAnalysisPages';
 import liffApiRoutes from './routes/liffApi';
 import liffPagesRoutes from './routes/liffPages';
+import { setupErrorLogging } from './logger';
 
 dotenv.config();
+setupErrorLogging('qigong-line-bot');
 
 const app = express();
 const PORT = process.env.PORT || 3000;

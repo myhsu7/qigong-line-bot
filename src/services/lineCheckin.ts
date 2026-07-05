@@ -43,7 +43,7 @@ export const upsertLineUser = async (lineUserId: string, displayName?: string | 
 };
 
 const getPracticeMethodRows = async (): Promise<PracticeMethodRow[]> => {
-    const { rows } = await db.query(
+    const { rows } = await db.queryWithRetry(
         `SELECT id, code, name_zh, name_en, estimated_minutes, parent_id, method_type
          FROM practice_methods
          WHERE is_active = TRUE
@@ -140,7 +140,7 @@ export const getLeafCodesByParentCode = async (): Promise<Map<string, string[]>>
 
 export const getTodayLineCheckin = async (lineUserId: string): Promise<TodayLineCheckinResponse> => {
     const today = moment().tz(TIMEZONE).format('YYYY-MM-DD');
-    const { rows } = await db.query(
+    const { rows } = await db.queryWithRetry(
         `SELECT id, reflection_note, body_feeling_note
          FROM checkin_logs
          WHERE line_user_id = $1 AND checkin_date = $2`,
@@ -159,7 +159,7 @@ export const getTodayLineCheckin = async (lineUserId: string): Promise<TodayLine
     }
 
     const checkin = rows[0];
-    const selected = await db.query(
+    const selected = await db.queryWithRetry(
         `SELECT practice_method_id
          FROM checkin_method_selections
          WHERE checkin_log_id = $1
