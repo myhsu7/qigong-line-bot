@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>功法分析</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; background: #f6f7fb; color: #1f2937; }
     .container { max-width: 760px; margin: 0 auto; padding: 20px; }
@@ -13,6 +14,11 @@
     h2 { font-size: 18px; margin: 0 0 12px; }
     .muted { color: #6b7280; font-size: 14px; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .chart-wrap { position: relative; height: 260px; margin-top: 16px; }
+    .summary-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .summary-box { background:#f9fafb; border-radius:12px; padding:12px; }
+    .summary-label { color:#6b7280; font-size:12px; text-transform:uppercase; font-weight:700; }
+    .summary-value { font-size:22px; font-weight:800; color:#06c755; margin-top:6px; }
     .method-item { display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid #f3f4f6; }
     .method-item:last-child { border-bottom:0; }
     .tag { display:inline-flex; align-items:center; border-radius:999px; padding:4px 10px; background:#ecfdf5; color:#065f46; font-size:12px; font-weight:600; margin:0 6px 6px 0; }
@@ -21,7 +27,7 @@
     .note-box { background:#f9fafb; border-radius:10px; padding:12px; }
     .note-label { color:#6b7280; font-size:12px; font-weight:700; margin-bottom:6px; text-transform:uppercase; }
     .empty,.loading { text-align:center; color:#6b7280; padding:24px 0; }
-    @media (max-width: 640px) { .grid,.note-grid { grid-template-columns:1fr; } }
+    @media (max-width: 640px) { .grid,.note-grid,.summary-grid { grid-template-columns:1fr; } }
   </style>
 </head>
 <body>
@@ -34,10 +40,18 @@
     <div class="grid">
       <div class="card">
         <h2>近 30 天</h2>
+        <div id="analysis30Summary" class="loading">載入中...</div>
+        <div id="analysis30ChartWrap" class="chart-wrap" style="display:none;">
+          <canvas id="analysis30Chart"></canvas>
+        </div>
         <div id="analysis30" class="loading">載入中...</div>
       </div>
       <div class="card">
         <h2>近 90 天</h2>
+        <div id="analysis90Summary" class="loading">載入中...</div>
+        <div id="analysis90ChartWrap" class="chart-wrap" style="display:none;">
+          <canvas id="analysis90Chart"></canvas>
+        </div>
         <div id="analysis90" class="loading">載入中...</div>
       </div>
     </div>
@@ -57,6 +71,9 @@
     const LIFF_ID = '<%= liffId %>';
     let lineUserId = '';
     let displayName = '';
+    let analysis30Chart = null;
+    let analysis90Chart = null;
+    const chartColors = ['#0d6efd','#198754','#ffc107','#fd7e14','#dc3545','#6f42c1','#20c997','#14b8a6','#8b5cf6','#f97316'];
     const escapeHtml = (value) => String(value || '')
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
@@ -75,18 +92,68 @@
       return res.json();
     };
 
-    const renderMethodTable = (targetId, dataObj) => {
-      const target = document.getElementById(targetId);
+    const renderAnalysis = (prefix, dataObj) => {
+      const target = document.getElementById(`${prefix}`);
+      const summary = document.getElementById(`${prefix}Summary`);
+      const chartWrap = document.getElementById(`${prefix}ChartWrap`);
+      const canvas = document.getElementById(`${prefix}Chart`);
+
       if (!dataObj || !dataObj.methods || dataObj.methods.length === 0) {
+        summary.innerHTML = '<div class="empty">目前沒有足夠資料</div>';
+        chartWrap.style.display = 'none';
         target.innerHTML = '<div class="empty">目前沒有足夠資料</div>';
         return;
       }
-      target.innerHTML = dataObj.methods.slice(0, 5).map((m) => `
+
+      summary.innerHTML = `
+        <div class="summary-grid">
+          <div class="summary-box">
+            <div class="summary-label">總打卡天數</div>
+            <div class="summary-value">${dataObj.totalCheckinDays || 0}</div>
+          </div>
+          <div class="summary-box">
+            <div class="summary-label">功法命中總天數</div>
+            <div class="summary-value">${dataObj.totalMatchedMethodDays || 0}</div>
+          </div>
+        </div>
+      `;
+
+      target.innerHTML = dataObj.methods.slice(0, 5).map((m, index) => `
         <div class="method-item">
-          <div>${escapeHtml(m.methodName)}</div>
-          <div><strong>${m.matchedDays}</strong> 天</div>
+          <div>${index + 1}. ${escapeHtml(m.methodName)}</div>
+          <div><strong>${m.matchedDays}</strong> 天｜${(m.compositionRatio * 100).toFixed(1)}%</div>
         </div>
       `).join('');
+
+      chartWrap.style.display = 'block';
+      const labels = dataObj.methods.map((m) => m.methodName);
+      const values = dataObj.methods.map((m) => m.matchedDays);
+
+      if (prefix === 'analysis30' && analysis30Chart) analysis30Chart.destroy();
+      if (prefix === 'analysis90' && analysis90Chart) analysis90Chart.destroy();
+
+      const chart = new Chart(canvas.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            backgroundColor: chartColors.slice(0, labels.length)
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom'
+            }
+          }
+        }
+      });
+
+      if (prefix === 'analysis30') analysis30Chart = chart;
+      if (prefix === 'analysis90') analysis90Chart = chart;
     };
 
     const renderJournal = (entries) => {
@@ -124,11 +191,13 @@
       displayName = profile.displayName || '';
       try {
         const data = await apiFetch('/line/api/liff/method-analysis');
-        renderMethodTable('analysis30', data.analysis30d);
-        renderMethodTable('analysis90', data.analysis90d);
+        renderAnalysis('analysis30', data.analysis30d);
+        renderAnalysis('analysis90', data.analysis90d);
         document.getElementById('reviewText').textContent = data.reviewText || '目前沒有點評';
         renderJournal(data.journal || []);
       } catch (error) {
+        document.getElementById('analysis30Summary').innerHTML = `<div class="empty">載入失敗：${error.message}</div>`;
+        document.getElementById('analysis90Summary').innerHTML = `<div class="empty">載入失敗：${error.message}</div>`;
         document.getElementById('analysis30').innerHTML = `<div class="empty">載入失敗：${error.message}</div>`;
         document.getElementById('analysis90').innerHTML = `<div class="empty">載入失敗：${error.message}</div>`;
         document.getElementById('reviewText').textContent = `載入失敗：${error.message}`;
