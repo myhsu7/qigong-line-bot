@@ -15,7 +15,7 @@ export const methodDictionary = [
     { name: '和氣舒壓法', aliases: ['和氣舒壓法', '和氣', '舒壓法'] },
     { name: '三窩功', aliases: ['三窩功'] },
     { name: '六音理臟法', aliases: ['六音理臟法'] },
-    { name: '靜功', aliases: ['靜功', '周天靜功', '七星心法'] }
+    { name: '靜功', aliases: ['靜功', '周天靜功', '七星心法', '鬆靜功'] }
 ];
 
 const leafMethodCatalog = [
@@ -39,7 +39,8 @@ const leafMethodCatalog = [
     '三窩功',
     '六音理臟法',
     '周天靜功',
-    '七星心法'
+    '七星心法',
+    '鬆靜功'
 ];
 
 export type MethodPeriod = '30d' | '90d' | 'month' | 'quarter' | 'year';

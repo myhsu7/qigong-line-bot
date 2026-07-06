@@ -150,7 +150,8 @@ FROM (
         ('zhengyang_morning', '晨功', 'Morning Practice', 10, 51, 'zhengyang'),
         ('zhengyang_night', '夜功', 'Night Practice', 10, 52, 'zhengyang'),
         ('jinggong_zhoutian', '周天靜功', 'Zhoutian Quiet Practice', 10, 111, 'jinggong'),
-        ('jinggong_qixing', '七星心法', 'Seven Star Method', 10, 112, 'jinggong')
+        ('jinggong_qixing', '七星心法', 'Seven Star Method', 10, 112, 'jinggong'),
+        ('jinggong_songjing', '鬆靜功', 'Songjing Practice', 10, 113, 'jinggong')
 ) AS child(code, name_zh, name_en, estimated_minutes, sort_order, parent_code)
 JOIN practice_methods parent ON parent.code = child.parent_code
 ON CONFLICT (code) DO UPDATE SET

@@ -237,6 +237,12 @@ Run this migration to enable structured check-in:
 docker exec -i qigong_db psql -U qigong_user -d qigong_bot < migrations/003_line_liff_structured_checkin.sql
 ```
 
+If you already use the hierarchical practice-method setup, also run the latest method additions:
+
+```bash
+docker exec -i qigong_db psql -U qigong_user -d qigong_bot < migrations/007_line_add_songjing_method.sql
+```
+
 This migration adds:
 
 - `practice_methods`
@@ -276,6 +282,7 @@ If only the legacy shared `LIFF_ID` is configured, the bot will fall back to the
 - New structured check-ins are stored in `checkin_method_selections`.
 - Existing text-only history is preserved.
 - Method analysis now prefers structured selections and falls back to note text matching for older records.
+- `靜功` now includes the additional child method `鬆靜功`, while method analysis still aggregates `周天靜功` / `七星心法` / `鬆靜功` under the parent method `靜功`.
 
 ## 📈 Admin Dashboard (Web)
 
