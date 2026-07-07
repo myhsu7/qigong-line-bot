@@ -77,6 +77,25 @@
     const escapeHtml = (value) => String(value || '')
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
+    const formatLocalDateTime = (dateTime) => {
+      if (!dateTime) return '-';
+      const date = new Date(dateTime);
+      if (Number.isNaN(date.getTime())) return escapeHtml(dateTime);
+      const parts = new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+        timeZoneName: 'short'
+      }).formatToParts(date);
+
+      const getPart = (type) => parts.find((part) => part.type === type)?.value || '';
+      return `${getPart('year')}-${getPart('month')}-${getPart('day')} ${getPart('hour')}:${getPart('minute')}:${getPart('second')} ${getPart('timeZoneName')}`;
+    };
+
     const apiFetch = async (url) => {
       const separator = url.includes('?') ? '&' : '?';
       const finalUrl = `${url}${separator}displayName=${encodeURIComponent(displayName)}`;
@@ -164,7 +183,7 @@
       }
       container.innerHTML = entries.map((entry) => `
         <div class="journal-entry">
-          <div><strong>${escapeHtml(entry.date)}</strong></div>
+          <div><strong>${escapeHtml(formatLocalDateTime(entry.recordedAt || entry.date))}</strong></div>
           <div style="margin-top:8px;">${(entry.methodNames || []).map((name) => `<span class="tag">${escapeHtml(name)}</span>`).join('')}</div>
           <div class="note-grid">
             <div class="note-box">

@@ -48,6 +48,7 @@ export type MethodPeriod = '30d' | '90d' | 'month' | 'quarter' | 'year';
 export interface UserPracticeJournalEntry {
     id: number;
     date: string;
+    recordedAt: string;
     methodNames: string[];
     reflectionNote: string;
     bodyFeelingNote: string;
@@ -244,6 +245,7 @@ export const getUserPracticeJournal = async (userId: string, limit = 12): Promis
     const { rows } = await db.query(
         `SELECT c.id,
                 c.checkin_date,
+                COALESCE(c.updated_at, c.created_at) AS recorded_at,
                 c.reflection_note,
                 c.body_feeling_note,
                 ARRAY_AGG(pm.name_zh ORDER BY pm.sort_order ASC, pm.id ASC)
@@ -265,6 +267,7 @@ export const getUserPracticeJournal = async (userId: string, limit = 12): Promis
     return rows.map((row) => ({
         id: Number(row.id),
         date: row.checkin_date,
+        recordedAt: row.recorded_at instanceof Date ? row.recorded_at.toISOString() : String(row.recorded_at),
         methodNames: Array.isArray(row.method_names)
             ? row.method_names.filter((name: string | null) => typeof name === 'string')
             : [],
