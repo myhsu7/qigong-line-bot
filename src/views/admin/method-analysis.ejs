@@ -135,6 +135,26 @@
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
 
+    const formatLocalDateTime = (dateTime) => {
+        if (!dateTime) return '-';
+        const date = new Date(dateTime);
+        if (Number.isNaN(date.getTime())) return escapeHtml(dateTime);
+
+        const parts = new Intl.DateTimeFormat('en-US', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false,
+            timeZoneName: 'short'
+        }).formatToParts(date);
+
+        const getPart = (type) => parts.find((part) => part.type === type)?.value || '';
+        return `${getPart('year')}-${getPart('month')}-${getPart('day')} ${getPart('hour')}:${getPart('minute')}:${getPart('second')} ${getPart('timeZoneName')}`;
+    };
+
     const renderMethodTable = (dataObj) => {
         if (dataObj.methods.length === 0) return '<p class="text-muted small p-2 m-0"><%= i18n.no_data %></p>';
         
@@ -159,7 +179,7 @@
             const methods = (entry.methodNames || []).map((name) => `<span class="badge text-bg-light border me-1 mb-1">${escapeHtml(name)}</span>`).join('');
             return `
                 <div class="border rounded p-3 mb-3 bg-white">
-                    <div class="fw-bold mb-2">${escapeHtml(entry.date)}</div>
+                    <div class="fw-bold mb-2">${escapeHtml(formatLocalDateTime(entry.recordedAt || entry.date))}</div>
                     <div class="mb-2">${methods || '<span class="text-muted small">未記錄功法</span>'}</div>
                     <div class="row g-2">
                         <div class="col-md-6">
