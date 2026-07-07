@@ -21,6 +21,7 @@ setupErrorLogging('qigong-line-bot');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const LINE_REMINDER_ENABLED = process.env.LINE_REMINDER_ENABLED === 'true';
 
 // Setup EJS for Admin Dashboard
 app.set('view engine', 'ejs');
@@ -60,14 +61,20 @@ app.get('/', (req, res) => {
 });
 
 // Setup cron job (Run every day at 20:00 Asia/Taipei)
-cron.schedule('0 20 * * *', () => {
-    console.log('Running daily reminder cron job...');
-    sendDailyReminder();
-}, {
-    timezone: "Asia/Taipei"
-});
+if (LINE_REMINDER_ENABLED) {
+    cron.schedule('0 20 * * *', () => {
+        console.log('Running daily reminder cron job...');
+        sendDailyReminder();
+    }, {
+        timezone: 'Asia/Taipei'
+    });
+}
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
-    console.log(`Cron job scheduled for 20:00 Asia/Taipei`);
+    if (LINE_REMINDER_ENABLED) {
+        console.log('Cron job scheduled for 20:00 Asia/Taipei');
+    } else {
+        console.log('LINE daily reminder cron disabled');
+    }
 });

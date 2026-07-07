@@ -60,6 +60,7 @@ ADMIN_USER_ID=your_line_user_id
 LINE_BOT_SHORTCUT_URL=https://line.me/R/oaMessage/%40your_oa_id/?%E2%9C%85%20Check-In
 LIFF_ID=your_liff_id
 LINE_LIFF_CHECKIN_URL=https://liff.line.me/your_liff_id
+LINE_REMINDER_ENABLED=false
 LIFF_ID_CHECKIN=your_checkin_liff_id
 LIFF_ID_LEADERBOARD=your_leaderboard_liff_id
 LIFF_ID_HISTORY=your_history_liff_id
@@ -73,6 +74,7 @@ ADMIN_ALLOWED_IP_PREFIX=100.
 *(If you are using the provided Docker setup, the default DB credentials will work immediately).*
 *(For `ADMIN_USER_ID`, this is your personal LINE user ID, needed to execute `!admin` commands).*
 *(For `LINE_BOT_SHORTCUT_URL`, this is the deep link used in group reminders to open the 1-on-1 chat with the bot and prefill `✅ Check-In`, so LIFF check-in runs in DM context instead of posting summaries back to the group).*
+*(For `LINE_REMINDER_ENABLED`, set `true` to enable the daily 20:00 group reminder cron, or `false` to disable it while still keeping the manual admin reminder commands available).*
 *(For `LIFF_ID`, this is the legacy shared LIFF app id. It can still be used as a fallback, but the recommended setup now uses dedicated LIFF apps per feature.)*
 *(For `LINE_LIFF_CHECKIN_URL`, this is the legacy shared LIFF launch URL. With dedicated LIFF apps configured, the bot will prefer `LIFF_ID_CHECKIN`, `LIFF_ID_LEADERBOARD`, `LIFF_ID_HISTORY`, `LIFF_ID_METHOD_ANALYSIS`, `LIFF_ID_ACHIEVEMENTS`, and `LIFF_ID_REMINDER`.)*
 
