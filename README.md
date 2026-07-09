@@ -175,7 +175,7 @@ Badges are displayed in your "Trophy Case" when you check your stats. Some badge
 - 🦉 **夜靜:** 5 consecutive days checking in between 21:00 - 23:00
 
 #### Seasonal Challenges (歲時節氣)
-- ☀️ **夏練三伏:** Earned by checking in for 27 consecutive days exactly after the Summer Solstice (夏至).
+- ☀️ **夏練三伏:** Earned by completing full attendance during that year's Sanfu period (三伏), whose total length can vary by year.
 - ❄️ **冬練三九:** Earned by checking in for 27 consecutive days exactly after the Winter Solstice (冬至) **and** including the keyword "龜壽功" in your practice note.
 
 ## Admin Commands

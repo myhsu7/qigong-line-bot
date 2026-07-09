@@ -2,7 +2,7 @@ import { messagingApi, webhook } from '@line/bot-sdk';
 import { db } from './db';
 import moment from 'moment-timezone';
 import { evaluateBadges } from './badges';
-import { sendDailyReminder, sendAdHocBroadcast, sendManualResendReminder } from './cron';
+import { createReminderText, sendDailyReminder, sendAdHocBroadcast, sendManualResendReminder } from './cron';
 import { buildPeriodLeaderboardText } from './leaderboard';
 
 const TIMEZONE = 'Asia/Taipei';
@@ -130,6 +130,14 @@ export const handleEvent = async (event: webhook.Event): Promise<any> => {
             return client.replyMessage({
                 replyToken,
                 messages: [{ type: 'text', text: `系統訊息：已成功手動觸發補發提醒廣播！送出 ${result.successCount}/${result.totalCount} 個群組。` }]
+            });
+        }
+
+        if (text === '!admin create-reminder' && replyToken) {
+            const reminderText = await createReminderText();
+            return client.replyMessage({
+                replyToken,
+                messages: [{ type: 'text', text: reminderText }]
             });
         }
 

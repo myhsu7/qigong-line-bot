@@ -5,6 +5,7 @@ import moment from 'moment-timezone';
 
 import { getDailyWisdom } from './content/wisdom';
 import { getSolarTermGuide } from './content/solarTerms';
+import { getSanFuPeriod, isDateInSanFuPeriod } from './utils/sanfu';
 
 const TIMEZONE = 'Asia/Taipei';
 const CHECKIN_SHORTCUT_URL = process.env.LINE_BOT_SHORTCUT_URL || '';
@@ -23,14 +24,6 @@ const getJieQiDateStr = (year: number, jieQiName: string): string | null => {
     return jieQi ? jieQi.toYmd() : null;
 };
 
-const isSummerChallengePeriod = (now: moment.Moment): boolean => {
-    const summerSolsticeStr = getJieQiDateStr(now.year(), '夏至');
-    if (!summerSolsticeStr) return false;
-    const summerSolstice = moment.tz(summerSolsticeStr, TIMEZONE);
-    const daysSince = now.diff(summerSolstice, 'days');
-    return daysSince >= 0 && daysSince <= 27;
-};
-
 const isWinterChallengePeriod = (now: moment.Moment): boolean => {
     const winterSolsticeStr = getJieQiDateStr(now.year(), 'DONG_ZHI');
     if (!winterSolsticeStr) return false;
@@ -42,22 +35,25 @@ const isWinterChallengePeriod = (now: moment.Moment): boolean => {
 const buildReminderMessage = (
     mode: 'normal' | 'summer' | 'winter' | 'resend', 
     solarTermMsg: string | null, 
+    badgeSpotlightMsg: string,
     leaderMsg: string,
-    dailyWisdom: string
+    dailyWisdom: string,
+    sanFuTotalDays: number | null
 ): string => {
     let msg = '';
     
     if (mode === 'summer') {
-        msg = `☀️ 夏練三伏進行中！\n\n連續 27 天，養陽固本；不求暴增，只求日進。\n今晚別忘了完成打卡，穩穩累積你的功力！\n\n${leaderMsg}`;
+        const totalDaysText = sanFuTotalDays ? `今年三伏期間共 ${sanFuTotalDays} 天` : '三伏期間進行中';
+        msg = `☀️ 夏練三伏進行中！\n\n${totalDaysText}，養陽固本；不求暴增，只求日進。\n今晚別忘了完成打卡，穩穩累積你的功力！\n\n${badgeSpotlightMsg}\n\n${leaderMsg}`;
     } else if (mode === 'winter') {
-        msg = `❄️ 冬練三九進行中！\n\n冬藏養精，重在恆心。今晚一起穩定練習，\n記得在打卡備註寫上「龜壽功」參與挑戰。\n\n${leaderMsg}`;
+        msg = `❄️ 冬練三九進行中！\n\n冬藏養精，重在恆心。今晚一起穩定練習，\n記得在打卡備註寫上「龜壽功」參與挑戰。\n\n${badgeSpotlightMsg}\n\n${leaderMsg}`;
     } else if (mode === 'resend') {
         msg = `📣 補發提醒：還沒打卡的同學，現在就來完成！\n\n每天一點點，身心更穩定。\n今天完成，就能守住你的習慣與連勝。`;
     } else {
         if (solarTermMsg) {
-            msg = `🌿 ${solarTermMsg}\n\n順時養生，順勢練功。今天也別忘了完成打卡喔！\n\n${leaderMsg}`;
+            msg = `🌿 ${solarTermMsg}\n\n順時養生，順勢練功。今天也別忘了完成打卡喔！\n\n${badgeSpotlightMsg}\n\n${leaderMsg}`;
         } else {
-            msg = `🌙 晚安！氣功時間到了！\n\n${dailyWisdom}\n\n大家今天練習了嗎？記得完成打卡，守住你的節奏！\n\n${leaderMsg}`;
+            msg = `🌙 晚安！氣功時間到了！\n\n${dailyWisdom}\n\n大家今天練習了嗎？記得完成打卡，守住你的節奏！\n\n${badgeSpotlightMsg}\n\n${leaderMsg}`;
         }
     }
 
@@ -66,6 +62,73 @@ const buildReminderMessage = (
     }
 
     return msg;
+};
+
+const getLeaderMessage = async () => {
+    const leaderResult = await db.query(
+        'SELECT display_name, current_streak FROM users WHERE current_streak > 0 ORDER BY RANDOM() LIMIT 3'
+    );
+
+    if (leaderResult.rows.length > 0) {
+        return '🔥 每日精進榜：\n' + leaderResult.rows.map((r) => `• ${r.display_name} - 連續 ${r.current_streak} 天`).join('\n');
+    }
+
+    return '🔥 每日精進榜：\n大家快來打卡，開啟你的練功連勝紀錄吧！';
+};
+
+const getBadgeSpotlightMessage = async (now: moment.Moment) => {
+    const { rows } = await db.query(
+        `SELECT id, name, emoji, description
+         FROM badges
+         ORDER BY created_at ASC, id ASC`
+    );
+
+    if (rows.length === 0) {
+        return '🏅 本期挑戰成就\n暫無成就資料';
+    }
+
+    const badgeIndex = Math.floor((now.dayOfYear() - 1) / 3) % rows.length;
+    const badge = rows[badgeIndex];
+    const emoji = badge.emoji || '🏅';
+
+    return [
+        '🏅 本期挑戰成就',
+        `${emoji} ${badge.name}`,
+        badge.description,
+        '',
+        '完成這項挑戰，替你的修練留下一枚勳章。'
+    ].join('\n');
+};
+
+export const createReminderText = async (modeOverride?: 'resend') => {
+    const today = new Date();
+    const lunar = Lunar.fromDate(today);
+    let solarTermMsg: string | null = null;
+
+    const currentJieQi = lunar.getJieQi();
+    if (currentJieQi) {
+        const guide = getSolarTermGuide(currentJieQi);
+        if (guide) {
+            solarTermMsg = `今日節氣：${currentJieQi}\n\n${guide}`;
+        }
+    }
+
+    const nowTz = moment().tz(TIMEZONE);
+    const sanFuPeriod = getSanFuPeriod(nowTz.year());
+    const dailyWisdom = getDailyWisdom(nowTz);
+    const [leaderMsg, badgeSpotlightMsg] = await Promise.all([
+        getLeaderMessage(),
+        getBadgeSpotlightMessage(nowTz)
+    ]);
+
+    return buildReminderMessage(
+        modeOverride || (isDateInSanFuPeriod(nowTz) ? 'summer' : isWinterChallengePeriod(nowTz) ? 'winter' : 'normal'),
+        solarTermMsg,
+        badgeSpotlightMsg,
+        leaderMsg,
+        dailyWisdom,
+        sanFuPeriod?.totalDays || null
+    );
 };
 
 export const sendDailyReminder = async (modeOverride?: 'resend') => {
@@ -78,42 +141,7 @@ export const sendDailyReminder = async (modeOverride?: 'resend') => {
             return { successCount: 0, totalCount: 0, groupIds: [] as string[] };
         }
 
-        // Generate Solar Term (節氣) Info
-        const today = new Date();
-        const lunar = Lunar.fromDate(today);
-        let solarTermMsg: string | null = null;
-        
-        const currentJieQi = lunar.getJieQi();
-        // If today is exactly the day of a Solar Term
-        if (currentJieQi) {
-            const guide = getSolarTermGuide(currentJieQi);
-            if (guide) {
-                solarTermMsg = `今日節氣：${currentJieQi}\n\n${guide}`;
-            }
-        }
-
-        // Daily Wisdom logic
-        const nowTz = moment().tz(TIMEZONE);
-        const dailyWisdom = getDailyWisdom(nowTz);
-
-        // Leaderboard Highlight (e.g. random top 3 streaks)
-        const leaderResult = await db.query(
-            "SELECT display_name, current_streak FROM users WHERE current_streak > 0 ORDER BY RANDOM() LIMIT 3"
-        );
-        
-        let leaderMsg = '';
-        if (leaderResult.rows.length > 0) {
-            leaderMsg = '🔥 今日精進榜：\n' + leaderResult.rows.map(r => `• ${r.display_name} - 連續 ${r.current_streak} 天`).join('\n');
-        } else {
-            leaderMsg = '大家快來打卡，開啟你的練功連勝紀錄吧！';
-        }
-
-        const messageText = buildReminderMessage(
-            modeOverride || (isSummerChallengePeriod(nowTz) ? 'summer' : isWinterChallengePeriod(nowTz) ? 'winter' : 'normal'),
-            solarTermMsg,
-            leaderMsg,
-            dailyWisdom
-        );
+        const messageText = await createReminderText(modeOverride);
 
         if (!CHECKIN_SHORTCUT_URL) {
             console.warn('[Warning] LINE_BOT_SHORTCUT_URL is not set. Reminder check-in link will not be appended.');

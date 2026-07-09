@@ -72,7 +72,7 @@ INSERT INTO badges (id, name, emoji, description, category) VALUES
     ('total_100', '大樹', '🌳', '總計打卡 100 天', 'TOTAL'),
     ('time_morning', '晨露', '🌅', '連續 5 天在早上 5:00 - 7:00 打卡', 'TIME_BASED'),
     ('time_night', '夜靜', '🦉', '連續 5 天在晚上 9:00 - 11:00 打卡', 'TIME_BASED'),
-    ('seasonal_summer_27', '夏練三伏', '☀️', '夏至過後，連續打卡 27 天', 'SEASONAL'),
+    ('seasonal_summer_27', '夏練三伏', '☀️', '於當年三伏期間完成全程打卡', 'SEASONAL'),
     ('seasonal_winter_27', '冬練三九', '❄️', '冬至過後，連續打卡 27 天，且練習龜壽功', 'SEASONAL'),
     ('combo_dayan', '大雁雙修', '🦢', '同日練習大雁初與大雁高，可於每年重新解鎖', 'COMBO'),
     ('combo_wuqinxi', '五禽圓滿', '🐅', '同日完成五禽戲全套五式，可於每年重新解鎖', 'COMBO'),

@@ -4,6 +4,7 @@ import moment from 'moment-timezone';
 import { Solar, Lunar } from 'lunar-javascript';
 import { getLeafCodesByParentCode } from './services/lineCheckin';
 import { methodDictionary } from './services/methodStats';
+import { getSanFuPeriod } from './utils/sanfu';
 
 const TIMEZONE = 'Asia/Taipei';
 
@@ -181,22 +182,19 @@ export const evaluateBadges = async (userId: string, text: string, selectedMetho
         return jieQi ? jieQi.toYmd() : null;
     };
 
-    const summerSolsticeStr = getJieQiDateStr(currentYear, '夏至');
-    if (summerSolsticeStr) {
-        const summerSolstice = moment.tz(summerSolsticeStr, TIMEZONE);
-        const daysSinceSummer = now.diff(summerSolstice, 'days');
-        
-        // If it's been exactly 27 days since summer solstice (27th day after)
-        if (daysSinceSummer === 27) {
-            if (!(await hasEarnedBadge(userId, 'seasonal_summer_27', currentYear))) {
-                // Check if they checked in 27 times since the solstice
-                const { rows } = await db.query(
-                    'SELECT COUNT(DISTINCT DATE(created_at AT TIME ZONE $1)) as count FROM checkin_logs WHERE line_user_id = $2 AND created_at >= $3',
-                    [TIMEZONE, userId, summerSolstice.toDate()]
-                );
-                if (parseInt(rows[0].count) >= 27) {
-                    await awardBadge(userId, 'seasonal_summer_27', currentYear);
-                }
+    const sanFuPeriod = getSanFuPeriod(currentYear);
+    if (sanFuPeriod && now.isSame(sanFuPeriod.end, 'day')) {
+        if (!(await hasEarnedBadge(userId, 'seasonal_summer_27', currentYear))) {
+            const { rows } = await db.query(
+                `SELECT COUNT(DISTINCT COALESCE(checkin_date, DATE(created_at AT TIME ZONE $1))) AS count
+                 FROM checkin_logs
+                 WHERE line_user_id = $2
+                   AND COALESCE(checkin_date, DATE(created_at AT TIME ZONE $1)) >= $3
+                   AND COALESCE(checkin_date, DATE(created_at AT TIME ZONE $1)) <= $4`,
+                [TIMEZONE, userId, sanFuPeriod.start.format('YYYY-MM-DD'), sanFuPeriod.end.format('YYYY-MM-DD')]
+            );
+            if (parseInt(rows[0].count, 10) >= sanFuPeriod.totalDays) {
+                await awardBadge(userId, 'seasonal_summer_27', currentYear);
             }
         }
     }
