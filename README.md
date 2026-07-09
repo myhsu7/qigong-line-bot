@@ -182,6 +182,7 @@ Badges are displayed in your "Trophy Case" when you check your stats. Some badge
 
 If you have configured `ADMIN_USER_ID` in your `.env` file, you can type these commands in any chat (1-on-1 or group) with the bot:
 - `!admin register_group`: Register the current group for daily broadcasts.
+- `!admin create-reminder`: Generate today's group reminder text and send it back to the admin for manual reposting.
 - `!admin resend-reminder`: Manually trigger the 8:00 PM daily reminder broadcast.
 - `!admin broadcast [message]`: Send an ad-hoc custom message to all registered active groups.
 
