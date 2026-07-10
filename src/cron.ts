@@ -17,6 +17,25 @@ const lineConfig = {
 
 const client = new messagingApi.MessagingApiClient(lineConfig);
 
+const BADGE_SPOTLIGHT_ORDER = [
+    'streak_3', 'streak_7', 'streak_21', 'streak_100',
+    'total_10', 'total_100',
+    'time_morning', 'time_night',
+    'seasonal_summer_27', 'seasonal_winter_27',
+    'combo_dayan', 'combo_wuqinxi', 'combo_huichun', 'combo_guishou', 'combo_zhengyang', 'combo_jinggong',
+    'method_dayan_7', 'method_dayan_30', 'method_dayan_100',
+    'method_wuqinxi_7', 'method_wuqinxi_30', 'method_wuqinxi_100',
+    'method_huichun_7', 'method_huichun_30', 'method_huichun_100',
+    'method_guishou_7', 'method_guishou_30', 'method_guishou_100',
+    'method_zhengyang_7', 'method_zhengyang_30', 'method_zhengyang_100',
+    'method_huanghai_7', 'method_huanghai_30', 'method_huanghai_100',
+    'method_lotus_7', 'method_lotus_30', 'method_lotus_100',
+    'method_heqi_7', 'method_heqi_30', 'method_heqi_100',
+    'method_sanwo_7', 'method_sanwo_30', 'method_sanwo_100',
+    'method_liuyin_7', 'method_liuyin_30', 'method_liuyin_100',
+    'method_jinggong_7', 'method_jinggong_30', 'method_jinggong_100'
+] as const;
+
 // Helper to get Solar Term exact date using Lunar.fromDate mapping
 const getJieQiDateStr = (year: number, jieQiName: string): string | null => {
     const lunar = Lunar.fromDate(new Date(year, 6, 1));
@@ -79,16 +98,23 @@ const getLeaderMessage = async () => {
 const getBadgeSpotlightMessage = async (now: moment.Moment) => {
     const { rows } = await db.query(
         `SELECT id, name, emoji, description
-         FROM badges
-         ORDER BY created_at ASC, id ASC`
+         FROM badges`
     );
 
     if (rows.length === 0) {
         return '🏅 本期挑戰成就\n暫無成就資料';
     }
 
-    const badgeIndex = Math.floor((now.dayOfYear() - 1) / 3) % rows.length;
-    const badge = rows[badgeIndex];
+    const orderMap = new Map(BADGE_SPOTLIGHT_ORDER.map((id, index) => [id, index]));
+    const sortedRows = [...rows].sort((a, b) => {
+        const aIndex = orderMap.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+        const bIndex = orderMap.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+        if (aIndex !== bIndex) return aIndex - bIndex;
+        return String(a.id).localeCompare(String(b.id));
+    });
+
+    const badgeIndex = Math.floor((now.dayOfYear() - 1) / 3) % sortedRows.length;
+    const badge = sortedRows[badgeIndex];
     const emoji = badge.emoji || '🏅';
 
     return [
