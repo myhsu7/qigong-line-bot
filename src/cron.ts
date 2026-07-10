@@ -43,6 +43,13 @@ const getJieQiDateStr = (year: number, jieQiName: string): string | null => {
     return jieQi ? jieQi.toYmd() : null;
 };
 
+const getGreeting = (now: moment.Moment) => {
+    const hour = now.hour();
+    if (hour >= 5 && hour < 11) return '☀️ 早安！';
+    if (hour >= 11 && hour < 17) return '🌤 午安！';
+    return '🌙 晚安！';
+};
+
 const isWinterChallengePeriod = (now: moment.Moment): boolean => {
     const winterSolsticeStr = getJieQiDateStr(now.year(), 'DONG_ZHI');
     if (!winterSolsticeStr) return false;
@@ -53,6 +60,7 @@ const isWinterChallengePeriod = (now: moment.Moment): boolean => {
 
 const buildReminderMessage = (
     mode: 'normal' | 'summer' | 'winter' | 'resend', 
+    greeting: string,
     solarTermMsg: string | null, 
     badgeSpotlightMsg: string,
     leaderMsg: string,
@@ -63,16 +71,16 @@ const buildReminderMessage = (
     
     if (mode === 'summer') {
         const totalDaysText = sanFuTotalDays ? `今年三伏期間共 ${sanFuTotalDays} 天` : '三伏期間進行中';
-        msg = `☀️ 夏練三伏進行中！\n\n${totalDaysText}，養陽固本；不求暴增，只求日進。\n今晚別忘了完成打卡，穩穩累積你的功力！\n\n${badgeSpotlightMsg}\n\n${leaderMsg}`;
+        msg = `${greeting} 夏練三伏進行中！\n\n${totalDaysText}，養陽固本；不求暴增，只求日進。\n今晚別忘了完成打卡，穩穩累積你的功力！\n\n${badgeSpotlightMsg}\n\n${leaderMsg}`;
     } else if (mode === 'winter') {
-        msg = `❄️ 冬練三九進行中！\n\n冬藏養精，重在恆心。今晚一起穩定練習，\n記得在打卡備註寫上「龜壽功」參與挑戰。\n\n${badgeSpotlightMsg}\n\n${leaderMsg}`;
+        msg = `${greeting} 冬練三九進行中！\n\n冬藏養精，重在恆心。今晚一起穩定練習，\n記得在打卡備註寫上「龜壽功」參與挑戰。\n\n${badgeSpotlightMsg}\n\n${leaderMsg}`;
     } else if (mode === 'resend') {
         msg = `📣 補發提醒：還沒打卡的同學，現在就來完成！\n\n每天一點點，身心更穩定。\n今天完成，就能守住你的習慣與連勝。`;
     } else {
         if (solarTermMsg) {
-            msg = `🌿 ${solarTermMsg}\n\n順時養生，順勢練功。今天也別忘了完成打卡喔！\n\n${badgeSpotlightMsg}\n\n${leaderMsg}`;
+            msg = `${greeting} ${solarTermMsg}\n\n順時養生，順勢練功。今天也別忘了完成打卡喔！\n\n${badgeSpotlightMsg}\n\n${leaderMsg}`;
         } else {
-            msg = `🌙 晚安！氣功時間到了！\n\n${dailyWisdom}\n\n大家今天練習了嗎？記得完成打卡，守住你的節奏！\n\n${badgeSpotlightMsg}\n\n${leaderMsg}`;
+            msg = `${greeting} 氣功時間到了！\n\n${dailyWisdom}\n\n大家今天練習了嗎？記得完成打卡，守住你的節奏！\n\n${badgeSpotlightMsg}\n\n${leaderMsg}`;
         }
     }
 
@@ -141,6 +149,7 @@ export const createReminderText = async (modeOverride?: 'resend') => {
 
     const nowTz = moment().tz(TIMEZONE);
     const sanFuPeriod = getSanFuPeriod(nowTz.year());
+    const greeting = getGreeting(nowTz);
     const dailyWisdom = getDailyWisdom(nowTz);
     const [leaderMsg, badgeSpotlightMsg] = await Promise.all([
         getLeaderMessage(),
@@ -149,6 +158,7 @@ export const createReminderText = async (modeOverride?: 'resend') => {
 
     return buildReminderMessage(
         modeOverride || (isDateInSanFuPeriod(nowTz) ? 'summer' : isWinterChallengePeriod(nowTz) ? 'winter' : 'normal'),
+        greeting,
         solarTermMsg,
         badgeSpotlightMsg,
         leaderMsg,
