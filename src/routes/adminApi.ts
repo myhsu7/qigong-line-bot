@@ -1,5 +1,6 @@
 import { Request, Router } from 'express';
 import { getOverviewStats, getLeaderboardStats, AdminPeriod, getAdminPeriodRange, getCheckedInUsersByDate, getPendingUsersByDate } from '../services/adminStats';
+import { getAdminPracticeJournal } from '../services/methodStats';
 import moment from 'moment-timezone';
 
 const router = Router();
@@ -99,6 +100,16 @@ router.get('/today-pending', async (req, res) => {
         if (e instanceof Error && e.message.startsWith('Invalid date')) {
             return res.status(400).json({ error: e.message });
         }
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+router.get('/journal', async (req, res) => {
+    try {
+        const data = await getAdminPracticeJournal(parsePage(req), parseLimit(req));
+        res.json(data);
+    } catch (e) {
+        console.error('Error fetching admin journal API:', e);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });

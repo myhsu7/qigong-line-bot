@@ -27,5 +27,6 @@ export const zhTW = {
     recent_90_days: '近 90 天',
     review: '練功點評',
     method_name: '功法',
-    matched_days: '命中天數'
+    matched_days: '命中天數',
+    journal_feed: '學員心得流'
 };

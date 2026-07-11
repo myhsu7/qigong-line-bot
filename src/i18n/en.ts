@@ -27,5 +27,6 @@ export const en = {
     recent_90_days: 'Last 90 Days',
     review: 'Review',
     method_name: 'Method',
-    matched_days: 'Matched Days'
+    matched_days: 'Matched Days',
+    journal_feed: 'Journal Feed'
 };

@@ -1,0 +1,120 @@
+<%- include('../partials/header') %>
+
+<div class="chart-container">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div>
+            <h5 class="mb-1"><%= i18n.journal_feed %></h5>
+            <div class="text-muted small">依時間倒序查看學員最近的練功心得與身體感受</div>
+        </div>
+        <div class="text-muted small" id="journalMeta">載入中...</div>
+    </div>
+
+    <div id="journalList">
+        <div class="text-center text-muted my-5">載入中...</div>
+    </div>
+
+    <div class="d-flex justify-content-center mt-4">
+        <button class="btn btn-outline-primary d-none" id="loadMoreBtn" type="button">載入更多</button>
+    </div>
+</div>
+
+<script>
+    let currentPage = 1;
+    let totalPages = 1;
+    const lang = <%- JSON.stringify(lang) %>;
+
+    const journalList = document.getElementById('journalList');
+    const journalMeta = document.getElementById('journalMeta');
+    const loadMoreBtn = document.getElementById('loadMoreBtn');
+
+    const escapeHtml = (value) => String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+    const formatLocalDateTime = (dateTime) => {
+        if (!dateTime) return '-';
+        const date = new Date(dateTime);
+        if (Number.isNaN(date.getTime())) return escapeHtml(dateTime);
+
+        const parts = new Intl.DateTimeFormat('en-US', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false,
+            timeZoneName: 'short'
+        }).formatToParts(date);
+
+        const getPart = (type) => parts.find((part) => part.type === type)?.value || '';
+        return `${getPart('year')}-${getPart('month')}-${getPart('day')} ${getPart('hour')}:${getPart('minute')}:${getPart('second')} ${getPart('timeZoneName')}`;
+    };
+
+    const renderEntries = (entries, append = false) => {
+        if (!entries || entries.length === 0) {
+            if (!append) {
+                journalList.innerHTML = '<div class="text-center text-muted my-5">目前沒有可顯示的心得或身體感受。</div>';
+            }
+            return;
+        }
+
+        const html = entries.map((entry) => {
+            const methods = (entry.methodNames || []).map((name) => `<span class="badge text-bg-light border me-1 mb-1">${escapeHtml(name)}</span>`).join('');
+            return `
+                <div class="border rounded p-3 mb-3 bg-white">
+                    <div class="d-flex justify-content-between align-items-start gap-3 mb-2 flex-wrap">
+                        <div>
+                            <div class="fw-bold text-primary">${escapeHtml(entry.displayName || 'Unknown')}</div>
+                            <div class="text-muted small">${escapeHtml(formatLocalDateTime(entry.recordedAt || entry.date))}</div>
+                        </div>
+                        <a class="text-decoration-none small fw-bold" href="/line/admin-dashboard/method-analysis?period=30d&lang=${encodeURIComponent(lang)}&userId=${encodeURIComponent(entry.lineUserId || '')}&name=${encodeURIComponent(entry.displayName || 'Unknown')}">查看功法分析</a>
+                    </div>
+                    <div class="mb-2">${methods || '<span class="text-muted small">未記錄功法</span>'}</div>
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <div class="bg-light rounded p-2 h-100">
+                                <div class="text-muted small fw-bold mb-1">練功心得</div>
+                                <div>${escapeHtml(entry.reflectionNote || '未填寫')}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="bg-light rounded p-2 h-100">
+                                <div class="text-muted small fw-bold mb-1">身體感受</div>
+                                <div>${escapeHtml(entry.bodyFeelingNote || '未填寫')}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        if (append) {
+            journalList.insertAdjacentHTML('beforeend', html);
+        } else {
+            journalList.innerHTML = html;
+        }
+    };
+
+    const loadJournal = async (page = 1, append = false) => {
+        const res = await fetch(`/line/api/admin/journal?page=${page}&limit=20`);
+        const data = await res.json();
+        currentPage = data.page;
+        totalPages = data.totalPages;
+        journalMeta.textContent = `共 ${data.total} 筆｜第 ${currentPage} / ${totalPages} 頁`;
+        renderEntries(data.entries || [], append);
+        loadMoreBtn.classList.toggle('d-none', currentPage >= totalPages);
+    };
+
+    loadMoreBtn.addEventListener('click', () => {
+        if (currentPage >= totalPages) return;
+        loadJournal(currentPage + 1, true);
+    });
+
+    loadJournal();
+</script>
+
+<%- include('../partials/footer') %>

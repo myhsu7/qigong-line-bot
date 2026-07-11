@@ -47,11 +47,21 @@ export type MethodPeriod = '30d' | '90d' | 'month' | 'quarter' | 'year';
 
 export interface UserPracticeJournalEntry {
     id: number;
+    lineUserId?: string;
+    displayName?: string;
     date: string;
     recordedAt: string;
     methodNames: string[];
     reflectionNote: string;
     bodyFeelingNote: string;
+}
+
+export interface AdminPracticeJournalPage {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    entries: UserPracticeJournalEntry[];
 }
 
 interface PeriodRange {
@@ -274,6 +284,59 @@ export const getUserPracticeJournal = async (userId: string, limit = 12): Promis
         reflectionNote: row.reflection_note || '',
         bodyFeelingNote: row.body_feeling_note || ''
     }));
+};
+
+export const getAdminPracticeJournal = async (page = 1, limit = 20): Promise<AdminPracticeJournalPage> => {
+    const offset = (page - 1) * limit;
+
+    const countRes = await db.query(
+        `SELECT COUNT(*) AS total
+         FROM checkin_logs c
+         WHERE COALESCE(BTRIM(c.reflection_note), '') <> ''
+            OR COALESCE(BTRIM(c.body_feeling_note), '') <> ''`
+    );
+    const total = parseInt(countRes.rows[0]?.total || '0', 10);
+
+    const { rows } = await db.query(
+        `SELECT c.id,
+                c.line_user_id,
+                u.display_name,
+                c.checkin_date,
+                COALESCE(c.updated_at, c.created_at) AS recorded_at,
+                c.reflection_note,
+                c.body_feeling_note,
+                ARRAY_AGG(pm.name_zh ORDER BY pm.sort_order ASC, pm.id ASC)
+                    FILTER (WHERE pm.id IS NOT NULL) AS method_names
+         FROM checkin_logs c
+         JOIN users u ON u.line_user_id = c.line_user_id
+         LEFT JOIN checkin_method_selections s ON s.checkin_log_id = c.id
+         LEFT JOIN practice_methods pm ON pm.id = s.practice_method_id
+         WHERE COALESCE(BTRIM(c.reflection_note), '') <> ''
+            OR COALESCE(BTRIM(c.body_feeling_note), '') <> ''
+         GROUP BY c.id, u.line_user_id, u.display_name
+         ORDER BY COALESCE(c.updated_at, c.created_at) DESC
+         LIMIT $1 OFFSET $2`,
+        [limit, offset]
+    );
+
+    return {
+        total,
+        page,
+        limit,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+        entries: rows.map((row) => ({
+            id: Number(row.id),
+            lineUserId: row.line_user_id,
+            displayName: row.display_name || 'Unknown',
+            date: row.checkin_date,
+            recordedAt: row.recorded_at instanceof Date ? row.recorded_at.toISOString() : String(row.recorded_at),
+            methodNames: Array.isArray(row.method_names)
+                ? row.method_names.filter((name: string | null) => typeof name === 'string')
+                : [],
+            reflectionNote: row.reflection_note || '',
+            bodyFeelingNote: row.body_feeling_note || ''
+        }))
+    };
 };
 
 export const buildUserMethodReview = (analysis30d: any, analysis90d: any): string => {

@@ -52,4 +52,21 @@ router.get('/leaderboard', async (req, res) => {
     }
 });
 
+router.get('/journal', async (req, res) => {
+    const period = isValidPeriod(req.query.period) ? req.query.period : 'week';
+
+    try {
+        res.render('admin/journal', {
+            i18n: req.i18n,
+            lang: req.langCode,
+            currentPeriod: period,
+            dateRange: 'Latest first',
+            path: '/line/admin-dashboard/journal'
+        });
+    } catch (e) {
+        console.error('Error rendering admin journal page:', e);
+        res.status(500).send('Server Error');
+    }
+});
+
 export default router;
