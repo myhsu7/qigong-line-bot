@@ -93,11 +93,21 @@ const buildReminderMessage = (
 
 const getLeaderMessage = async () => {
     const leaderResult = await db.query(
-        'SELECT display_name, current_streak FROM users WHERE current_streak > 0 ORDER BY RANDOM() LIMIT 3'
+        `SELECT display_name, current_streak, total_checkins
+         FROM users
+         WHERE current_streak > 0
+         ORDER BY current_streak DESC, total_checkins DESC, display_name ASC
+         LIMIT 10`
     );
 
     if (leaderResult.rows.length > 0) {
-        return '🔥 每日精進榜：\n' + leaderResult.rows.map((r) => `• ${r.display_name} - 連續 ${r.current_streak} 天`).join('\n');
+        const shuffled = [...leaderResult.rows]
+            .map((row) => ({ row, sortKey: Math.random() }))
+            .sort((a, b) => a.sortKey - b.sortKey)
+            .slice(0, 3)
+            .map((item) => item.row);
+
+        return '🔥 每日精進榜：\n' + shuffled.map((r) => `• ${r.display_name} - 連續 ${r.current_streak} 天`).join('\n');
     }
 
     return '🔥 每日精進榜：\n大家快來打卡，開啟你的練功連勝紀錄吧！';
