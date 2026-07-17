@@ -72,6 +72,7 @@ LOCAL_LLM_BASE_URL=http://127.0.0.1:11434/v1
 LOCAL_LLM_API_KEY=dummy
 LOCAL_LLM_MODEL=your_model_name
 LOCAL_LLM_TIMEOUT_MS=5000
+LOCAL_LLM_CRITERIA=30
 ADMIN_DASH_USER=admin
 ADMIN_DASH_PASS=your_strong_password
 ADMIN_ALLOWED_IP_PREFIX=100.
@@ -82,6 +83,7 @@ ADMIN_ALLOWED_IP_PREFIX=100.
 *(For `LINE_REMINDER_ENABLED`, set `true` to enable the daily 20:00 group reminder cron, or `false` to disable it while still keeping the manual admin reminder commands available).*
 *(For `LOCAL_LLM_ENABLED`, set `true` to enable LLM-generated method review text; if disabled or unavailable, the system falls back to the built-in rule-based review.)*
 *(For `LOCAL_LLM_BASE_URL` and `LOCAL_LLM_MODEL`, point them to your OpenAI-compatible local model service used by the method analysis review section.)*
+*(For `LOCAL_LLM_CRITERIA`, set the minimum lifetime total check-in days required before LLM review is used. For example, `30` means users with fewer than 30 lifetime total check-in days will always fall back to the built-in rule-based review.)*
 *(For `LIFF_ID`, this is the legacy shared LIFF app id. It can still be used as a fallback, but the recommended setup now uses dedicated LIFF apps per feature.)*
 *(For `LINE_LIFF_CHECKIN_URL`, this is the legacy shared LIFF launch URL. With dedicated LIFF apps configured, the bot will prefer `LIFF_ID_CHECKIN`, `LIFF_ID_LEADERBOARD`, `LIFF_ID_HISTORY`, `LIFF_ID_METHOD_ANALYSIS`, `LIFF_ID_ACHIEVEMENTS`, and `LIFF_ID_REMINDER`.)*
 

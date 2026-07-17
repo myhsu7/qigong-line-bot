@@ -1,3 +1,5 @@
+import { db } from '../db';
+
 type MethodMixInput = {
     totalCheckinDays: number;
     totalMatchedMethodDays: number;
@@ -52,6 +54,17 @@ export const generateMethodReviewWithLlm = async (analysis30d: MethodMixInput, f
     const model = process.env.LOCAL_LLM_MODEL || '';
     const apiKey = process.env.LOCAL_LLM_API_KEY || 'dummy';
     const timeoutMs = parseInt(process.env.LOCAL_LLM_TIMEOUT_MS || '5000', 10);
+    const criteria = parseInt(process.env.LOCAL_LLM_CRITERIA || '0', 10);
+
+    const { rows } = await db.query(
+        'SELECT total_checkins FROM users WHERE line_user_id = $1',
+        [userId]
+    );
+    const totalLifetimeCheckins = Number(rows[0]?.total_checkins || 0);
+
+    if (Number.isFinite(criteria) && criteria > 0 && totalLifetimeCheckins < criteria) {
+        return fallbackText;
+    }
 
     if (!enabled || !baseUrl || !model) {
         return fallbackText;
