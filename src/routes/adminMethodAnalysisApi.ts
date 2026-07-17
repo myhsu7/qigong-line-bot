@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getCommunityMethodSummary, searchUsersByName, getUserMethodAnalysis, getUserPracticeJournal, buildUserMethodReview, MethodPeriod, getMethodPeriodRange } from '../services/methodStats';
 import moment from 'moment-timezone';
+import { generateMethodReviewWithLlm } from '../services/methodReviewLlm';
 
 const router = Router();
 
@@ -49,7 +50,8 @@ router.get('/user', async (req, res) => {
             getUserMethodAnalysis(userId, '90d'),
             getUserPracticeJournal(userId)
         ]);
-        const reviewText = buildUserMethodReview(analysis30d, analysis90d);
+        const fallbackReviewText = buildUserMethodReview(analysis30d, analysis90d);
+        const reviewText = await generateMethodReviewWithLlm(analysis30d, fallbackReviewText, userId);
 
         res.json({
             '30d': analysis30d,

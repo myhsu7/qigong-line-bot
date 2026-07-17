@@ -3,6 +3,7 @@ import { getPracticeMethods, getTodayLineCheckin, saveTodayLineCheckin, upsertLi
 import { db } from '../db';
 import moment from 'moment-timezone';
 import { buildUserMethodReview, getUserMethodAnalysis, getUserPracticeJournal } from '../services/methodStats';
+import { generateMethodReviewWithLlm } from '../services/methodReviewLlm';
 
 const router = Router();
 
@@ -319,11 +320,13 @@ router.get('/method-analysis', async (req, res) => {
             getUserMethodAnalysis(lineUserId, '90d'),
             getUserPracticeJournal(lineUserId)
         ]);
+        const fallbackReviewText = buildUserMethodReview(analysis30d, analysis90d);
+        const reviewText = await generateMethodReviewWithLlm(analysis30d, fallbackReviewText, lineUserId);
 
         res.json({
             analysis30d,
             analysis90d,
-            reviewText: buildUserMethodReview(analysis30d, analysis90d),
+            reviewText,
             journal
         });
     } catch (error) {
