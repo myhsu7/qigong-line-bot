@@ -1,5 +1,13 @@
 <%- include('../partials/header') %>
 
+<div class="d-flex justify-content-end mb-3">
+    <div class="btn-group" role="group" aria-label="Leaderboard limit selector">
+        <a href="?period=<%= currentPeriod %>&limit=10&lang=<%= lang %>" class="btn btn-outline-primary <%= currentLimit === 10 ? 'active' : '' %>">Top 10</a>
+        <a href="?period=<%= currentPeriod %>&limit=20&lang=<%= lang %>" class="btn btn-outline-primary <%= currentLimit === 20 ? 'active' : '' %>">Top 20</a>
+        <a href="?period=<%= currentPeriod %>&limit=30&lang=<%= lang %>" class="btn btn-outline-primary <%= currentLimit === 30 ? 'active' : '' %>">Top 30</a>
+    </div>
+</div>
+
 <div class="row">
     <div class="col-md-6">
         <div class="chart-container">

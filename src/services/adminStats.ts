@@ -4,6 +4,7 @@ import { db } from '../db';
 const TIMEZONE = 'Asia/Taipei';
 
 export type AdminPeriod = 'week' | 'month' | 'quarter' | 'year';
+export type LeaderboardLimit = 10 | 20 | 30;
 
 interface PeriodRange {
     start: Date;
@@ -196,7 +197,7 @@ export const getPendingUsersByDate = async (dateStr: string, page = 1, limit = 2
     };
 };
 
-export const getLeaderboardStats = async (period: AdminPeriod) => {
+export const getLeaderboardStats = async (period: AdminPeriod, limit: LeaderboardLimit = 10) => {
     const { start, end } = getAdminPeriodRange(period);
 
     // Reuse the exact queries from the public leaderboard but optimized for admin
@@ -207,9 +208,9 @@ export const getLeaderboardStats = async (period: AdminPeriod) => {
         WHERE c.created_at >= $2 AND c.created_at < $3
         GROUP BY u.line_user_id, u.display_name
         ORDER BY total_days DESC, u.display_name ASC
-        LIMIT 10;
+        LIMIT $4;
     `;
-    const totalsRes = await db.query(totalsQuery, [TIMEZONE, start, end]);
+    const totalsRes = await db.query(totalsQuery, [TIMEZONE, start, end, limit]);
 
     const streaksQuery = `
         SELECT c.line_user_id, u.display_name, DATE(c.created_at AT TIME ZONE $1) AS d
@@ -260,7 +261,7 @@ export const getLeaderboardStats = async (period: AdminPeriod) => {
                 if (b.maxStreak !== a.maxStreak) return b.maxStreak - a.maxStreak;
                 return a.displayName.localeCompare(b.displayName);
             })
-            .slice(0, 10);
+            .slice(0, limit);
     }
 
     return {

@@ -1,5 +1,5 @@
 import { Request, Router } from 'express';
-import { getOverviewStats, getLeaderboardStats, AdminPeriod, getAdminPeriodRange, getCheckedInUsersByDate, getPendingUsersByDate } from '../services/adminStats';
+import { getOverviewStats, getLeaderboardStats, AdminPeriod, getAdminPeriodRange, getCheckedInUsersByDate, getPendingUsersByDate, LeaderboardLimit } from '../services/adminStats';
 import { getAdminPracticeJournal } from '../services/methodStats';
 import moment from 'moment-timezone';
 
@@ -8,6 +8,12 @@ const router = Router();
 // Define allowed periods
 const isValidPeriod = (p: any): p is AdminPeriod => {
     return ['week', 'month', 'quarter', 'year'].includes(p);
+};
+
+const parseLeaderboardLimit = (value: unknown): LeaderboardLimit => {
+    const parsed = Number(value);
+    if (parsed === 20 || parsed === 30) return parsed;
+    return 10;
 };
 
 router.get('/overview', async (req, res) => {
@@ -40,7 +46,7 @@ router.get('/leaderboard', async (req, res) => {
             return res.status(400).json({ error: 'Invalid period. Use week, month, quarter, or year.' });
         }
 
-        const data = await getLeaderboardStats(period);
+        const data = await getLeaderboardStats(period, parseLeaderboardLimit(req.query.limit));
         const range = getAdminPeriodRange(period);
 
         res.json({
