@@ -187,6 +187,72 @@ Badges are displayed in your "Trophy Case" when you check your stats. Some badge
 - ☀️ **夏練三伏:** Earned by completing full attendance during that year's Sanfu period (三伏), whose total length can vary by year.
 - ❄️ **冬練三九:** Earned by checking in for 27 consecutive days exactly after the Winter Solstice (冬至) **and** including the keyword "龜壽功" in your practice note.
 
+#### Combo Badges (同日組合成就)
+- 🦢 **大雁雙修:** Complete `大雁初` + `大雁高` on the same day. Repeatable once per year.
+- 🐅 **五禽圓滿:** Complete all five `五禽戲` forms on the same day. Repeatable once per year.
+- 🌱 **回春雙式:** Complete `回春初` + `回春中` on the same day. Repeatable once per year.
+- 🐢 **龜壽全式:** Complete `八卦功` + `乾坤功` + `鳳翔與龜縮` on the same day. Repeatable once per year.
+- ☀️ **正陽雙照:** Complete `晨功` + `夜功` on the same day. Repeatable once per year.
+- 🧘 **靜功雙法:** Complete `周天靜功` + `七星心法` on the same day. Repeatable once per year.
+
+#### Parent-Method Milestone Badges (主功法累計天數成就)
+Each of the following badges is awarded once when a user reaches the specified total practice days for that **parent method**. Child forms count toward the parent method total, and multiple child forms of the same parent practiced on the same day still count as **1 day** for that parent method.
+
+##### 大雁功
+- 🪶 **大雁功｜雁行入雲:** 累計練習「大雁功」7 天
+- 🪽 **大雁功｜雁翥沖虛:** 累計練習「大雁功」30 天
+- 🌤️ **大雁功｜雁歸太和:** 累計練習「大雁功」100 天
+
+##### 五禽戲
+- 🕊️ **五禽戲｜五行啟藏:** 累計練習「五禽戲」7 天
+- 🐾 **五禽戲｜五靈調炁:** 累計練習「五禽戲」30 天
+- 🦚 **五禽戲｜五禽歸真:** 累計練習「五禽戲」100 天
+
+##### 回春功
+- 🌱 **回春功｜春芽復炁:** 累計練習「回春功」7 天
+- 🍃 **回春功｜春和養真:** 累計練習「回春功」30 天
+- 🌿 **回春功｜回春長青:** 累計練習「回春功」100 天
+
+##### 龜壽功
+- 🐢 **龜壽功｜龜息守一:** 累計練習「龜壽功」7 天
+- 🪷 **龜壽功｜龜鶴養元:** 累計練習「龜壽功」30 天
+- 🏞️ **龜壽功｜壽炁綿長:** 累計練習「龜壽功」100 天
+
+##### 正陽功
+- 🌅 **正陽功｜朝陽啟炁:** 累計練習「正陽功」7 天
+- ☀️ **正陽功｜正陽養正:** 累計練習「正陽功」30 天
+- 🌞 **正陽功｜陽和充盈:** 累計練習「正陽功」100 天
+
+##### 神奇晃海功
+- 🌊 **晃海功｜晃海聽潮:** 累計練習「神奇晃海功」7 天
+- 🌌 **晃海功｜海定神凝:** 累計練習「神奇晃海功」30 天
+- 🌐 **晃海功｜海天一炁:** 累計練習「神奇晃海功」100 天
+
+##### 蓮花養心法
+- 🪷 **蓮花養心法｜蓮心初照:** 累計練習「蓮花養心法」7 天
+- 💮 **蓮花養心法｜蓮臺澄心:** 累計練習「蓮花養心法」30 天
+- 🌺 **蓮花養心法｜蓮華見性:** 累計練習「蓮花養心法」100 天
+
+##### 和氣舒壓法
+- 🍀 **和氣舒壓法｜和氣舒懷:** 累計練習「和氣舒壓法」7 天
+- 🌫️ **和氣舒壓法｜和光同塵:** 累計練習「和氣舒壓法」30 天
+- 🌈 **和氣舒壓法｜氣和神泰:** 累計練習「和氣舒壓法」100 天
+
+##### 三窩功
+- 🌀 **三窩功｜三窩聚炁:** 累計練習「三窩功」7 天
+- 🫧 **三窩功｜三田歸元:** 累計練習「三窩功」30 天
+- 🪨 **三窩功｜窩藏元和:** 累計練習「三窩功」100 天
+
+##### 六音理臟法
+- 🎵 **六音理臟法｜六音調藏:** 累計練習「六音理臟法」7 天
+- 🎶 **六音理臟法｜六律和臟:** 累計練習「六音理臟法」30 天
+- 🔔 **六音理臟法｜六炁周流:** 累計練習「六音理臟法」100 天
+
+##### 靜功
+- 🧘 **靜功｜守靜入門:** 累計練習「靜功」7 天
+- 🪷 **靜功｜澄心守一:** 累計練習「靜功」30 天
+- 🌌 **靜功｜虛極靜篤:** 累計練習「靜功」100 天
+
 ## Admin Commands
 
 If you have configured `ADMIN_USER_ID` in your `.env` file, you can type these commands in any chat (1-on-1 or group) with the bot:
