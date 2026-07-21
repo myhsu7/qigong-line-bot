@@ -1,5 +1,4 @@
 import { db } from './db';
-import { messagingApi } from '@line/bot-sdk';
 import moment from 'moment-timezone';
 import { Solar, Lunar } from 'lunar-javascript';
 import { getLeafCodesByParentCode } from './services/lineCheckin';
@@ -33,13 +32,6 @@ const METHOD_DAY_BADGE_GROUPS = [
 
 const METHOD_DAY_THRESHOLDS = [7, 30, 100] as const;
 
-const lineConfig = {
-    channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN || '',
-    channelSecret: process.env.LINE_CHANNEL_SECRET || '',
-};
-
-const client = new messagingApi.MessagingApiClient(lineConfig);
-
 const getMethodDictCTE = () => {
     const values = methodDictionary
         .map((method) => `('${method.name}', ARRAY[${method.aliases.map((alias) => `'${alias}'`).join(',')}])`)
@@ -68,22 +60,6 @@ const awardBadge = async (userId: string, badgeId: string, year: number) => {
         'INSERT INTO user_badges (line_user_id, badge_id, earned_year) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
         [userId, badgeId, year]
     );
-
-    const { rows } = await db.query('SELECT name, emoji, description FROM badges WHERE id = $1', [badgeId]);
-    if (rows.length > 0) {
-        const badge = rows[0];
-        const yearText = year !== 0 ? ` (${year}年)` : '';
-        const msg = `🎉 恭喜！你解鎖了【${badge.emoji} ${badge.name}】成就${yearText}！\n\n條件：${badge.description}\n繼續保持這份毅力！💪`;
-        
-        try {
-            await client.pushMessage({
-                to: userId,
-                messages: [{ type: 'text', text: msg }]
-            });
-        } catch (e) {
-            console.error(`Failed to send badge notification to ${userId}:`, e);
-        }
-    }
 };
 
 const getUserMethodDayCounts = async (userId: string) => {
